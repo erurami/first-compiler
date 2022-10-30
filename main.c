@@ -112,7 +112,10 @@ Token* Tokenize(char* p)
             continue;
         }
 
-        if (*p == '-' || *p == '+')
+        if (*p == '-' ||
+            *p == '+' ||
+            *p == '(' ||
+            *p == ')')
         {
             cur = newToken(TT_RESERVED, cur, p++);
             continue;
@@ -136,7 +139,7 @@ Token* Tokenize(char* p)
 // parse
 
 // expr = primary ( '+' primary | '-' primary)*
-// primary = num
+// primary = num | '(' expr ')'
 
 
 typedef enum
@@ -198,6 +201,13 @@ Node* expr(void)
 
 Node* primary(void)
 {
+    if (consume('('))
+    {
+        Node* node = expr();
+        expect(')');
+        return node;
+    }
+
     return newNumNode(expectNum());
 }
 
