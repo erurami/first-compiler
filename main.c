@@ -5,11 +5,23 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
+char* program;
 
 void error(char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    exit(1);
+}
+
+void errorAt(char* location, char* fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "%s\n", program);
+    fprintf(stderr, "%*c^ ", (int)(location - program), ' ');
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     exit(1);
@@ -44,7 +56,7 @@ int expectNum(void)
 {
     if (token->Type != TT_NUM)
     {
-        error("number expected");
+        errorAt(token->Str, "number expected");
     }
     int value = token->Value;
     token = token->Next;
@@ -68,7 +80,7 @@ bool consume(char operator)
 void expect(char operator)
 {
     if (consume(operator)) return;
-    error("operator %c expected", operator);
+    errorAt(token->Str, "operator %c expected", operator);
 }
 
 bool atEof(void)
@@ -113,11 +125,103 @@ Token* Tokenize(char* p)
             continue;
         }
 
-        error("couldn't tokenize");
+        errorAt(p, "couldn't tokenize");
     }
 
     newToken(TT_EOF, cur, NULL);
     return head.Next;
+}
+
+
+// parse
+
+// expr = primary ( '+' primary | '-' primary)*
+// primary = num
+
+
+typedef enum
+{
+    NT_NUM,
+    NT_ADD,
+    NT_SUB,
+} NodeType;
+
+typedef struct Node Node;
+
+struct Node
+{
+    NodeType Type;
+    Node* Lhs;
+    Node* Rhs;
+    int Value;
+};
+
+Node* newNode(NodeType type, Node* lhs, Node* rhs)
+{
+    Node* node = calloc(1, sizeof(Node));
+    node->Type = type;
+    node->Lhs = lhs;
+    node->Rhs = rhs;
+    return node;
+}
+
+Node* newNumNode(int value)
+{
+    Node* node = calloc(1, sizeof(Node));
+    node->Type = NT_NUM;
+    node->Value = value;
+    return node;
+}
+
+Node* expr(void);
+Node* primary(void);
+
+Node* expr(void)
+{
+    Node* lhs = primary();
+
+    while (1)
+    {
+        if (consume('+'))
+        {
+            lhs = newNode(NT_ADD, lhs, primary());
+            continue;
+        }
+        if (consume('-'))
+        {
+            lhs = newNode(NT_SUB, lhs, primary());
+            continue;
+        }
+        return lhs;
+    }
+}
+
+Node* primary(void)
+{
+    return newNumNode(expectNum());
+}
+
+void printNode(Node* node, int layer)
+{
+    switch (node->Type)
+    {
+        case NT_ADD:
+            printf("%*ctype : ADD\n", layer, ' ');
+            break;
+        case NT_SUB:
+            printf("%*ctype : SUB\n", layer, ' ');
+            break;
+        case NT_NUM:
+            printf("%*ctype : NUM\n", layer, ' ');
+            printf("%*cvalue : %d\n", layer, ' ', node->Value);
+            break;
+    }
+
+    if (node->Type != NT_NUM)
+    {
+        printNode(node->Lhs, layer + 1);
+        printNode(node->Rhs, layer + 1);
+    }
 }
 
 
@@ -132,29 +236,35 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    program = argv[1];
+
     token = Tokenize(argv[1]);
 
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
+    // printf(".intel_syntax noprefix\n");
+    // printf(".global main\n");
+    // printf("main:\n");
 
-    printf("  mov rax, %d\n", expectNum());
+    printNode(expr(), 1);
 
-    while (!atEof())
-    {
-        if (consume('+'))
-        {
-            printf("  add rax, %d\n", expectNum());
-            continue;
-        }
-        if (consume('-'))
-        {
-            printf("  sub rax, %d\n", expectNum());
-            continue;
-        }
-    }
+    // printf("  mov rax, %d\n", expectNum());
 
-    printf("  ret\n");
+    // while (!atEof())
+    // {
+    //     if (consume('+'))
+    //     {
+    //         printf("  add rax, %d\n", expectNum());
+    //         continue;
+    //     }
+    //     if (consume('-'))
+    //     {
+    //         printf("  sub rax, %d\n", expectNum());
+    //         continue;
+    //     }
+
+    //     expect(' ');
+    // }
+
+    // printf("  ret\n");
     return 0;
 }
 
