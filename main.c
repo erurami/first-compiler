@@ -266,6 +266,40 @@ void printNode(Node* node, int layer)
     }
 }
 
+void genAsm(Node* node)
+{
+    if (node->Type == NT_NUM)
+    {
+        printf("  push %d\n", node->Value);
+        return;
+    }
+
+    genAsm(node->Lhs);
+    genAsm(node->Rhs);
+
+    printf("  pop rdi\n");
+    printf("  pop rax\n");
+
+    switch(node->Type)
+    {
+        case NT_ADD:
+            printf("  add rax, rdi\n");
+            break;
+        case NT_SUB:
+            printf("  sub rax, rdi\n");
+            break;
+        case NT_MUL:
+            printf("  imul rax, rdi\n");
+            break;
+        case NT_DIV:
+            printf("  cqo\n");
+            printf("  idiv rax, rdi\n");
+            break;
+    }
+
+    printf("  push rax\n");
+}
+
 
 
 
@@ -282,11 +316,11 @@ int main(int argc, char** argv)
 
     token = Tokenize(argv[1]);
 
-    // printf(".intel_syntax noprefix\n");
-    // printf(".global main\n");
-    // printf("main:\n");
+    printf(".intel_syntax noprefix\n");
+    printf(".global main\n");
+    printf("main:\n");
 
-    printNode(expr(), 1);
+    genAsm(expr());
 
     // printf("  mov rax, %d\n", expectNum());
 
@@ -306,7 +340,8 @@ int main(int argc, char** argv)
     //     expect(' ');
     // }
 
-    // printf("  ret\n");
+    printf("  pop rax\n");
+    printf("  ret\n");
     return 0;
 }
 
