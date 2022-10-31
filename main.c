@@ -114,6 +114,8 @@ Token* Tokenize(char* p)
 
         if (*p == '-' ||
             *p == '+' ||
+            *p == '*' ||
+            *p == '/' ||
             *p == '(' ||
             *p == ')')
         {
@@ -138,7 +140,8 @@ Token* Tokenize(char* p)
 
 // parse
 
-// expr = primary ( '+' primary | '-' primary)*
+// expr = mul ( '+' mul | '-' mul)*
+// mul = primary ( '*' primary | '/' primary )*
 // primary = num | '(' expr ')'
 
 
@@ -147,6 +150,8 @@ typedef enum
     NT_NUM,
     NT_ADD,
     NT_SUB,
+    NT_MUL,
+    NT_DIV,
 } NodeType;
 
 typedef struct Node Node;
@@ -178,21 +183,42 @@ Node* newNumNode(int value)
 
 Node* expr(void);
 Node* primary(void);
+Node* mul(void);
 
 Node* expr(void)
 {
-    Node* lhs = primary();
+    Node* lhs = mul();
 
     while (1)
     {
         if (consume('+'))
         {
-            lhs = newNode(NT_ADD, lhs, primary());
+            lhs = newNode(NT_ADD, lhs, mul());
             continue;
         }
         if (consume('-'))
         {
-            lhs = newNode(NT_SUB, lhs, primary());
+            lhs = newNode(NT_SUB, lhs, mul());
+            continue;
+        }
+        return lhs;
+    }
+}
+
+Node* mul(void)
+{
+    Node* lhs = primary();
+
+    while (1)
+    {
+        if (consume('*'))
+        {
+            lhs = newNode(NT_MUL, lhs, primary());
+            continue;
+        }
+        if (consume('/'))
+        {
+            lhs = newNode(NT_DIV, lhs, primary());
             continue;
         }
         return lhs;
@@ -216,14 +242,20 @@ void printNode(Node* node, int layer)
     switch (node->Type)
     {
         case NT_ADD:
-            printf("%*ctype : ADD\n", layer, ' ');
+            printf("%*ctype : ADD\n", layer * 4, ' ');
             break;
         case NT_SUB:
-            printf("%*ctype : SUB\n", layer, ' ');
+            printf("%*ctype : SUB\n", layer * 4, ' ');
+            break;
+        case NT_MUL:
+            printf("%*ctype : MUL\n", layer * 4, ' ');
+            break;
+        case NT_DIV:
+            printf("%*ctype : DIV\n", layer * 4, ' ');
             break;
         case NT_NUM:
-            printf("%*ctype : NUM\n", layer, ' ');
-            printf("%*cvalue : %d\n", layer, ' ', node->Value);
+            printf("%*ctype : NUM\n", layer * 4, ' ');
+            printf("%*cvalue : %d\n", layer * 4, ' ', node->Value);
             break;
     }
 
