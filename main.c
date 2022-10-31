@@ -142,7 +142,7 @@ Token* Tokenize(char* p)
 
 // expr = mul ( '+' mul | '-' mul)*
 // mul = primary ( '*' primary | '/' primary )*
-// primary = num | '(' expr ')'
+// primary = ('+' | '-')? (num | '(' expr ')')
 
 
 typedef enum
@@ -227,14 +227,31 @@ Node* mul(void)
 
 Node* primary(void)
 {
+    bool unary = true;
+    Node* node;
+
+    if (consume('-'))
+    {
+        unary = false;
+    }
+    consume('+');
+
     if (consume('('))
     {
-        Node* node = expr();
+        node = expr();
         expect(')');
-        return node;
+    }
+    else
+    {
+        node = newNumNode(expectNum());
     }
 
-    return newNumNode(expectNum());
+    if (unary == false)
+    {
+        node = newNode(NT_SUB, newNumNode(0), node);
+    }
+
+    return node;
 }
 
 void printNode(Node* node, int layer)
@@ -321,24 +338,6 @@ int main(int argc, char** argv)
     printf("main:\n");
 
     genAsm(expr());
-
-    // printf("  mov rax, %d\n", expectNum());
-
-    // while (!atEof())
-    // {
-    //     if (consume('+'))
-    //     {
-    //         printf("  add rax, %d\n", expectNum());
-    //         continue;
-    //     }
-    //     if (consume('-'))
-    //     {
-    //         printf("  sub rax, %d\n", expectNum());
-    //         continue;
-    //     }
-
-    //     expect(' ');
-    // }
 
     printf("  pop rax\n");
     printf("  ret\n");
