@@ -27,12 +27,14 @@ Node* newNumNode(int value)
 }
 
 
-// comp = expr( '==' expr | '!-' expr)*
+// equality = comp ( '==' comp | '!-' comp)*
+// comp = expr ( '>' expr | '>=' expr | '<' expr | '<=' expr)*
 // expr = mul ( '+' mul | '-' mul)*
 // mul = primary ( '*' primary | '/' primary )*
-// primary = ('+' | '-')? (num | '(' comp ')')
+// primary = ('+' | '-')? (num | '(' equality ')')
 
 
+Node* equality(void);
 Node* comp(void);
 Node* expr(void);
 Node* primary(void);
@@ -40,7 +42,27 @@ Node* mul(void);
 
 Node* parse(void)
 {
-    return comp();
+    return equality();
+}
+
+Node* equality(void)
+{
+    Node* lhs = comp();
+
+    while (1)
+    {
+        if (consume("=="))
+        {
+            lhs = newNode(NT_EQUAL, lhs, comp());
+            continue;
+        }
+        if (consume("!="))
+        {
+            lhs = newNode(NT_NEQUAL, lhs, comp());
+            continue;
+        }
+        return lhs;
+    }
 }
 
 Node* comp(void)
@@ -49,14 +71,24 @@ Node* comp(void)
 
     while (1)
     {
-        if (consume("=="))
+        if (consume(">"))
         {
-            lhs = newNode(NT_EQUAL, lhs, expr());
+            lhs = newNode(NT_GREATER     , lhs, expr());
             continue;
         }
-        if (consume("!="))
+        if (consume(">="))
         {
-            lhs = newNode(NT_NEQUAL, lhs, expr());
+            lhs = newNode(NT_GREATEREQUAL, lhs, expr());
+            continue;
+        }
+        if (consume("<"))
+        {
+            lhs = newNode(NT_LESS        , lhs, expr());
+            continue;
+        }
+        if (consume("<="))
+        {
+            lhs = newNode(NT_LESSEQUAL   , lhs, expr());
             continue;
         }
         return lhs;
@@ -116,7 +148,7 @@ Node* primary(void)
 
     if (consume("("))
     {
-        node = comp();
+        node = equality();
         expect(")");
     }
     else
@@ -153,6 +185,18 @@ void printNode(Node* node, int layer)
             break;
         case NT_NEQUAL:
             printf("%*ctype : NEQUAL\n", layer * 4, ' ');
+            break;
+        case NT_GREATER:
+            printf("%*ctype : GREATER\n", layer * 4, ' ');
+            break;
+        case NT_GREATEREQUAL:
+            printf("%*ctype : GREATEREQUAL\n", layer * 4, ' ');
+            break;
+        case NT_LESS:
+            printf("%*ctype : LESS\n", layer * 4, ' ');
+            break;
+        case NT_LESSEQUAL:
+            printf("%*ctype : LESSEQUAL\n", layer * 4, ' ');
             break;
         case NT_NUM:
             printf("%*ctype : NUM\n", layer * 4, ' ');
@@ -204,6 +248,26 @@ void genAsm(Node* node)
         case NT_NEQUAL:
             printf("  cmp rax, rdi\n");
             printf("  setne al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case NT_GREATER:
+            printf("  cmp rdi, rax\n");
+            printf("  setl al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case NT_GREATEREQUAL:
+            printf("  cmp rdi, rax\n");
+            printf("  setle al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case NT_LESS:
+            printf("  cmp rax, rdi\n");
+            printf("  setl al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case NT_LESSEQUAL:
+            printf("  cmp rax, rdi\n");
+            printf("  setle al\n");
             printf("  movzb rax, al\n");
             break;
     }

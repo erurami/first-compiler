@@ -9,10 +9,14 @@
 
 static Token* token;
 
-int TOKENS_COUNT = 8;
+int KEYWORDS_COUNT = 12;
 
-char* tokens[] = \
+char* keywords[] = \
 {
+    ">=",
+    ">",
+    "<=",
+    "<",
     "==",
     "!=",
     "-",
@@ -100,10 +104,10 @@ void Tokenize(char* p)
         }
 
         bool token_found = false;
-        for (int i = 0; i < TOKENS_COUNT; i++)
+        for (int i = 0; i < KEYWORDS_COUNT; i++)
         {
-            int len = strlen(tokens[i]);
-            if (isToken(p, tokens[i], len))
+            int len = strlen(keywords[i]);
+            if (isToken(p, keywords[i], len))
             {
                 cur = newToken(TT_RESERVED, cur, p, len);
                 p += len;

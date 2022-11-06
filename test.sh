@@ -30,6 +30,12 @@ assert 2 "1 + + 1"
 assert 1 "- ( 3 * 3 - 3 ) * - 3 / 2 * 11 + 3 * + 8 == 123"
 assert 1 "(- ( 3 * 3 - 3 ) * - 3 / 2 * 11 + 3 * + 8 == 123) + (1 != 1)"
 assert 1 "1 != 0"
+assert 1 "1 < 2"
+assert 1 "1 <= 1"
+assert 0 "1 < 1"
+assert 1 "2 > 1"
+assert 1 "1 >= 1"
+assert 0 "1 > 1"
 
 echo OK
 

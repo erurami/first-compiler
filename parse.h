@@ -7,6 +7,10 @@ typedef enum
     NT_MUL,
     NT_EQUAL,
     NT_NEQUAL,
+    NT_GREATER,
+    NT_GREATEREQUAL,
+    NT_LESS,
+    NT_LESSEQUAL,
     NT_DIV,
 } NodeType;
 
