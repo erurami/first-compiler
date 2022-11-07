@@ -89,6 +89,18 @@ char* consumeIdent(int* len)
     return string;
 }
 
+bool consumeType(TokenType type)
+{
+    if (token->Type != type)
+    {
+        return false;
+    }
+
+    token = token->Next;
+
+    return true;
+}
+
 bool atEof(void)
 {
     if (token->Type == TT_EOF) return true;
@@ -129,6 +141,16 @@ void Tokenize(char* p)
         if (isspace(*p))
         {
             p++;
+            continue;
+        }
+
+        if (strncmp(p, "return", 6) == 0)
+        {
+            if (isIdentChar(*(p + 6)) == false)
+            {
+                cur = newToken(TT_RETURN, cur, p, 6);
+                p += 6;
+            }
             continue;
         }
 
@@ -178,9 +200,6 @@ void printTokens(void)
     {
         switch(cur->Type)
         {
-            case TT_NULL:
-                printf("type : NULL\n");
-                break;
             case TT_RESERVED:
                 printf("type : RESERVED\n");
                 printf("String : %.*s\n", cur->Len, cur->Str);

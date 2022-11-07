@@ -36,6 +36,7 @@ void initLocalValiablesDict(void);
 
 // program = statement*
 // statement = assign ';'
+//           | 'return' assign ';'
 // assign = equality ('=' assign)?
 // equality = comp ( '==' comp | '!-' comp)*
 // comp = expr ( '>' expr | '>=' expr | '<' expr | '<=' expr)*
@@ -73,7 +74,15 @@ Node** program(void)
 
 Node* statement(void)
 {
-    Node* node = assign();
+    Node* node;
+    if (consumeType(TT_RETURN))
+    {
+        node = assign();
+        expect(";");
+        return newNode(NT_RETURN, node, NULL);
+    }
+
+    node = assign();
     expect(";");
     return node;
 }
@@ -330,6 +339,16 @@ void printNode(Node* node, int layer)
         case NT_ASSIGN:
             printf("%*ctype : ASSIGN\n", layer * 4, ' ');
             break;
+
+        case NT_RETURN:
+            printf("%*ctype : RETURN\n", layer * 4, ' ');
+            break;
+    }
+
+    if (node->Type == NT_RETURN)
+    {
+        printNode(node->Lhs, layer + 1);
+        return;
     }
 
     if (node->Type != NT_NUM &&

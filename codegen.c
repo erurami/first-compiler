@@ -1,13 +1,18 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "common.h"
 #include "parse.h"
 #include "codegen.h"
 
+bool IsThereReturn;
+
 void genAsm(void)
 {
+    IsThereReturn = false;
+
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
@@ -22,10 +27,10 @@ void genAsm(void)
         printf("  pop rax\n");
     }
 
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-
-    printf("  ret\n");
+    if (IsThereReturn == false)
+    {
+        error("no return statement.");
+    }
 }
 
 void genAddr(Node* node)
@@ -63,6 +68,18 @@ void genAsmSingleStatement(Node* node)
         printf("  pop rdi\n");
         printf("  mov [rdi], rax\n");
         printf("  push rax\n");
+        return;
+    }
+    if (node->Type == NT_RETURN)
+    {
+        genAsmSingleStatement(node->Lhs);
+        printf("  pop rax\n");
+
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+
+        printf("  ret\n");
+        IsThereReturn = true;
         return;
     }
 

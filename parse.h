@@ -23,6 +23,9 @@ typedef enum
 
     NT_ASSIGN,
 
+    // flow-controlling
+    NT_RETURN,
+
 } NodeType;
 
 typedef struct Node Node;

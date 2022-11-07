@@ -3,10 +3,11 @@
 
 typedef enum
 {
-    TT_NULL,
-    TT_RESERVED,
     TT_IDENT,
     TT_NUM,
+
+    TT_RESERVED,
+    TT_RETURN,
 
     TT_EOF,
 } TokenType;
@@ -31,6 +32,8 @@ bool consume(char* op);
 void expect(char* op);
 
 char* consumeIdent(int* len);
+
+bool consumeType(TokenType type);
 
 bool atEof(void);
 
