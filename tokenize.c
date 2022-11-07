@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "tokenize.h"
 
 static Token* token;
 
-int KEYWORDS_COUNT = 12;
+int KEYWORDS_COUNT = 14;
 
 char* keywords[] = \
 {
@@ -19,6 +20,8 @@ char* keywords[] = \
     "<",
     "==",
     "!=",
+    "=",
+    ";",
     "-",
     "+",
     "*",
@@ -58,6 +61,21 @@ void expect(char* operator)
 {
     if (consume(operator)) return;
     errorAt(token->Str, "operator %s expected", operator);
+}
+
+char* consumeIdent(int* len)
+{
+    if (token->Type != TT_IDENT)
+    {
+        return 0;
+    }
+
+    *len = token->Len;
+    char* string = token->Str;
+
+    token = token->Next;
+
+    return string;
 }
 
 bool atEof(void)
@@ -116,20 +134,13 @@ void Tokenize(char* p)
             }
         }
         if (token_found) continue;
-        // if (isToken(p, "-")  ||
-        //     isToken(p, "+")  ||
-        //     isToken(p, "*")  ||
-        //     isToken(p, "/")  ||
-        //     isToken(p, "(")  ||
-        //     isToken(p, ")")  ||
-        //     isToken(p, "==") ||
-        //     isToken(p, "!=")
-        //     )
-        // {
-        //     cur = newToken(TT_RESERVED, cur, p, 1);
-        //     p++;
-        //     continue;
-        // }
+
+        if ('a' <= *p && *p <= 'z')
+        {
+            cur = newToken(TT_IDENT, cur, p, 1);
+            p++;
+            continue;
+        }
 
         if (isdigit(*p))
         {
@@ -145,5 +156,35 @@ void Tokenize(char* p)
 
     newToken(TT_EOF, cur, NULL, 0);
     token = head.Next;
+}
+
+void printTokens(void)
+{
+    Token* cur = token;
+
+    while (cur->Type != TT_EOF)
+    {
+        switch(cur->Type)
+        {
+            case TT_NULL:
+                printf("type : NULL\n");
+                break;
+            case TT_RESERVED:
+                printf("type : RESERVED\n");
+                printf("String : %.*s\n", cur->Len, cur->Str);
+                printf("Len : %d\n", cur->Len);
+                break;
+            case TT_IDENT:
+                printf("type : IDENT\n");
+                printf("String : %.*s\n", cur->Len, cur->Str);
+                printf("Len : %d\n", cur->Len);
+                break;
+            case TT_NUM:
+                printf("type : NUM\n");
+                printf("Num : %d", cur->Value);
+                break;
+        }
+        cur = cur->Next;
+    }
 }
 

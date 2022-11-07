@@ -8,6 +8,7 @@
 #include "common.h"
 #include "tokenize.h"
 #include "parse.h"
+#include "codegen.h"
 
 void error(char* fmt, ...)
 {
@@ -22,10 +23,13 @@ void errorAt(char* location, char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    fprintf(stderr, "%s\n", program);
-    fprintf(stderr, "%*c^ ", (int)(location - program), ' ');
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    fprintf(stderr, "%s\n", SourceCode);
+    if (location != NULL)
+    {
+        fprintf(stderr, "%*c^ \n", (int)(location - SourceCode), ' ');
+    }
     exit(1);
 }
 
@@ -40,18 +44,16 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    program = argv[1];
+    SourceCode = argv[1];
 
     Tokenize(argv[1]);
 
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
+    parse();
 
-    genAsm(parse());
+    // printProgramTree();
 
-    printf("  pop rax\n");
-    printf("  ret\n");
+    genAsm();
+
     return 0;
 }
 

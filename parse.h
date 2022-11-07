@@ -1,17 +1,28 @@
 
+#ifndef _PARSE_H_INCLUDE_
+#define _PARSE_H_INCLUDE_
+
 typedef enum
 {
+    // val and literal
     NT_NUM,
+    NT_LVAL,
+
+    // operators
     NT_ADD,
     NT_SUB,
     NT_MUL,
+    NT_DIV,
+
     NT_EQUAL,
     NT_NEQUAL,
     NT_GREATER,
     NT_GREATEREQUAL,
     NT_LESS,
     NT_LESSEQUAL,
-    NT_DIV,
+
+    NT_ASSIGN,
+
 } NodeType;
 
 typedef struct Node Node;
@@ -22,12 +33,17 @@ struct Node
     Node* Lhs;
     Node* Rhs;
     int Value;
+    int LValOffset;
+    char* pLValName;
+    int LValNameLen;
 };
 
 
-Node* parse(void);
 
+void parse(void);
+
+void printProgramTree(void);
 void printNode(Node* node, int layer);
-void genAsm(Node* node);
 
+#endif
 

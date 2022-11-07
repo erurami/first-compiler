@@ -3,11 +3,15 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common.h"
 #include "parse.h"
 #include "tokenize.h"
 
+
+int StatementsCount = 0;
+Node* ProgramBuf[100];
 
 Node* newNode(NodeType type, Node* lhs, Node* rhs)
 {
@@ -26,23 +30,62 @@ Node* newNumNode(int value)
     return node;
 }
 
+Node* newIdentNode(char* ident, int len);
 
+void initLocalValiablesDict(void);
+
+// program = statement*
+// statement = assign ';'
+// assign = equality ('=' assign)?
 // equality = comp ( '==' comp | '!-' comp)*
 // comp = expr ( '>' expr | '>=' expr | '<' expr | '<=' expr)*
 // expr = mul ( '+' mul | '-' mul)*
 // mul = primary ( '*' primary | '/' primary )*
-// primary = ('+' | '-')? (num | '(' equality ')')
+// unary = ('+' | '-')? primary
+// primary = num | ident | '(' assign ')'
 
 
+Node** program(void);
+Node* statement(void);
+Node* assign(void);
 Node* equality(void);
 Node* comp(void);
 Node* expr(void);
-Node* primary(void);
 Node* mul(void);
+Node* unary(void);
+Node* primary(void);
 
-Node* parse(void)
+void parse(void)
 {
-    return equality();
+    initLocalValiablesDict();
+    program();
+}
+
+Node** program(void)
+{
+    while (1)
+    {
+        ProgramBuf[StatementsCount++] = statement();
+        if (atEof()) break;
+    }
+    return ProgramBuf;
+}
+
+Node* statement(void)
+{
+    Node* node = assign();
+    expect(";");
+    return node;
+}
+
+Node* assign(void)
+{
+    Node* node = equality();
+    if (consume("="))
+    {
+        node = newNode(NT_ASSIGN, node, assign());
+    }
+    return node;
 }
 
 Node* equality(void)
@@ -117,46 +160,39 @@ Node* expr(void)
 
 Node* mul(void)
 {
-    Node* lhs = primary();
+    Node* lhs = unary();
 
     while (1)
     {
         if (consume("*"))
         {
-            lhs = newNode(NT_MUL, lhs, primary());
+            lhs = newNode(NT_MUL, lhs, unary());
             continue;
         }
         if (consume("/"))
         {
-            lhs = newNode(NT_DIV, lhs, primary());
+            lhs = newNode(NT_DIV, lhs, unary());
             continue;
         }
         return lhs;
     }
 }
 
-Node* primary(void)
+Node* unary(void)
 {
-    bool unary = true;
-    Node* node;
-
+    bool plus = true;
     if (consume("-"))
     {
-        unary = false;
-    }
-    consume("+");
-
-    if (consume("("))
-    {
-        node = equality();
-        expect(")");
+        plus = false;
     }
     else
     {
-        node = newNumNode(expectNum());
+        consume("+");
     }
 
-    if (unary == false)
+    Node* node = primary();
+
+    if (plus == false)
     {
         node = newNode(NT_SUB, newNumNode(0), node);
     }
@@ -164,10 +200,101 @@ Node* primary(void)
     return node;
 }
 
+Node* primary(void)
+{
+    Node* node;
+    char* ident;
+    int ident_len;
+
+    if (consume("("))
+    {
+        node = equality();
+        expect(")");
+    }
+    else if (ident = consumeIdent(&ident_len))
+    {
+        node = newIdentNode(ident, ident_len);
+    }
+    else
+    {
+        node = newNumNode(expectNum());
+    }
+
+    return node;
+}
+
+
+
+struct LValDictStruct LValDict;
+
+void initLocalValiablesDict(void)
+{
+    LValDict.Vals = NULL;
+    LValDict.ValsCount = 0;
+}
+
+int getLValId(char* ident, int len)
+{
+    for (int i = 0; i < LValDict.ValsCount; i++)
+    {
+        if (strlen(LValDict.Vals[i]) != len) continue;
+        if (memcmp(LValDict.Vals[i], ident, len) == 0) return i + 1;
+    }
+
+    char** new_vals_buf;
+    new_vals_buf = (char**)malloc(sizeof(char*) * (LValDict.ValsCount + 1));
+
+    for (int i = 0; i < LValDict.ValsCount; i++)
+    {
+        new_vals_buf[i] = LValDict.Vals[i];
+    }
+
+    free(LValDict.Vals);
+    LValDict.Vals = new_vals_buf;
+
+    LValDict.Vals[LValDict.ValsCount] = (char*)calloc((len + 1), sizeof(char));
+    memcpy(LValDict.Vals[LValDict.ValsCount], ident, len);
+
+    return ++LValDict.ValsCount;
+}
+
+
+Node* newIdentNode(char* ident, int len)
+{
+    Node* node;
+    node = newNode(NT_LVAL, NULL, NULL);
+    node->LValOffset = getLValId(ident, len) * 8;
+    node->pLValName = ident;
+    node->LValNameLen = len;
+}
+
+
+
+
+void printProgramTree(void)
+{
+    for (int i = 0; i < StatementsCount; i++)
+    {
+        printf("%d th statement\n", i + 1);
+        printf("\n");
+        printNode(ProgramBuf[i], 0);
+        printf("================================\n");
+    }
+}
+
 void printNode(Node* node, int layer)
 {
     switch (node->Type)
     {
+        case NT_NUM:
+            printf("%*ctype : NUM\n", layer * 4, ' ');
+            printf("%*cvalue : %d\n", layer * 4, ' ', node->Value);
+            break;
+        case NT_LVAL:
+            printf("%*ctype : LVAL\n", layer * 4, ' ');
+            printf("%*cvalue id : %d\n", layer * 4, ' ', node->LValOffset / 8);
+            break;
+
         case NT_ADD:
             printf("%*ctype : ADD\n", layer * 4, ' ');
             break;
@@ -180,6 +307,7 @@ void printNode(Node* node, int layer)
         case NT_DIV:
             printf("%*ctype : DIV\n", layer * 4, ' ');
             break;
+
         case NT_EQUAL:
             printf("%*ctype : EQUAL\n", layer * 4, ' ');
             break;
@@ -198,80 +326,16 @@ void printNode(Node* node, int layer)
         case NT_LESSEQUAL:
             printf("%*ctype : LESSEQUAL\n", layer * 4, ' ');
             break;
-        case NT_NUM:
-            printf("%*ctype : NUM\n", layer * 4, ' ');
-            printf("%*cvalue : %d\n", layer * 4, ' ', node->Value);
+
+        case NT_ASSIGN:
+            printf("%*ctype : ASSIGN\n", layer * 4, ' ');
             break;
     }
 
-    if (node->Type != NT_NUM)
+    if (node->Type != NT_NUM &&
+        node->Type != NT_LVAL)
     {
         printNode(node->Lhs, layer + 1);
         printNode(node->Rhs, layer + 1);
     }
 }
-
-void genAsm(Node* node)
-{
-    if (node->Type == NT_NUM)
-    {
-        printf("  push %d\n", node->Value);
-        return;
-    }
-
-    genAsm(node->Lhs);
-    genAsm(node->Rhs);
-
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
-
-    switch(node->Type)
-    {
-        case NT_ADD:
-            printf("  add rax, rdi\n");
-            break;
-        case NT_SUB:
-            printf("  sub rax, rdi\n");
-            break;
-        case NT_MUL:
-            printf("  imul rax, rdi\n");
-            break;
-        case NT_DIV:
-            printf("  cqo\n");
-            printf("  idiv rax, rdi\n");
-            break;
-        case NT_EQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  sete al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case NT_NEQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  setne al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case NT_GREATER:
-            printf("  cmp rdi, rax\n");
-            printf("  setl al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case NT_GREATEREQUAL:
-            printf("  cmp rdi, rax\n");
-            printf("  setle al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case NT_LESS:
-            printf("  cmp rax, rdi\n");
-            printf("  setl al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case NT_LESSEQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  setle al\n");
-            printf("  movzb rax, al\n");
-            break;
-    }
-
-    printf("  push rax\n");
-}
-
