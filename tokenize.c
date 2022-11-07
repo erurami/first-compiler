@@ -10,9 +10,9 @@
 
 static Token* token;
 
-int KEYWORDS_COUNT = 14;
+int OPERATORS_COUNT = 14;
 
-char* keywords[] = \
+char* operators[] = \
 {
     ">=",
     ">",
@@ -30,6 +30,17 @@ char* keywords[] = \
     ")",
 };
 
+
+bool isIdentChar(char chara)
+{
+    if (('a' <= chara && chara <= 'z') ||
+        ('A' <= chara && chara <= 'Z') ||
+        ('0' <= chara && chara <= '9'))
+    {
+        return true;
+    }
+    return false;
+}
 
 int expectNum(void)
 {
@@ -121,26 +132,19 @@ void Tokenize(char* p)
             continue;
         }
 
-        bool token_found = false;
-        for (int i = 0; i < KEYWORDS_COUNT; i++)
+        bool operator_found = false;
+        for (int i = 0; i < OPERATORS_COUNT; i++)
         {
-            int len = strlen(keywords[i]);
-            if (isToken(p, keywords[i], len))
+            int len = strlen(operators[i]);
+            if (isToken(p, operators[i], len))
             {
                 cur = newToken(TT_RESERVED, cur, p, len);
                 p += len;
-                token_found = true;
+                operator_found = true;
                 break;
             }
         }
-        if (token_found) continue;
-
-        if ('a' <= *p && *p <= 'z')
-        {
-            cur = newToken(TT_IDENT, cur, p, 1);
-            p++;
-            continue;
-        }
+        if (operator_found) continue;
 
         if (isdigit(*p))
         {
@@ -148,6 +152,14 @@ void Tokenize(char* p)
             int   value = strtol(p, &p, 10);
             cur = newToken(TT_NUM, cur, num_p, p - num_p);
             cur->Value = value;
+            continue;
+        }
+
+        if (isIdentChar(*p))
+        {
+            char* str = p;
+            while (isIdentChar(*p)) p++;
+            cur = newToken(TT_IDENT, cur, str, p - str);
             continue;
         }
 

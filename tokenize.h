@@ -7,6 +7,7 @@ typedef enum
     TT_RESERVED,
     TT_IDENT,
     TT_NUM,
+
     TT_EOF,
 } TokenType;
 

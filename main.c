@@ -50,8 +50,6 @@ int main(int argc, char** argv)
 
     parse();
 
-    // printProgramTree();
-
     genAsm();
 
     return 0;

@@ -39,6 +39,7 @@ assert 0 "1 > 1;"
 
 assert 123 "a = 123;a;"
 assert 123 "a = 10; b = 10; c = a * (b + 2); c + 1; c + 3;"
+assert 123 "Ten = 10; Two = 2; Three = 3; result1 = Ten * (Ten + Two); result2 = result1 + Three; result2;"
 
 echo OK
 
