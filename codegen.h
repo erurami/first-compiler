@@ -1,6 +1,6 @@
 
 // void checkProgram(void);
 
-void genAsm(void);
+void genAsm(Node* node);
 void genAsmSingleStatement(Node* node);
 

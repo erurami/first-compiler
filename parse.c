@@ -34,42 +34,57 @@ Node* newIdentNode(char* ident, int len);
 
 void initLocalValiablesDict(void);
 
-// program = statement*
-// statement = assign ';'
-//           | 'return' assign ';'
+// block = '{' statements
+// statements = statement (statements | '}')?
+// statement = expression ';'
+//           | 'return' expression ';'
+// expression = assign
 // assign = equality ('=' assign)?
 // equality = comp ( '==' comp | '!-' comp)*
-// comp = expr ( '>' expr | '>=' expr | '<' expr | '<=' expr)*
-// expr = mul ( '+' mul | '-' mul)*
+// comp = add ( '>' add | '>=' add | '<' add | '<=' add)*
+// add = mul ( '+' mul | '-' mul)*
 // mul = primary ( '*' primary | '/' primary )*
 // unary = ('+' | '-')? primary
 // primary = num | ident | '(' assign ')'
 
 
-Node** program(void);
+Node* block(void);
+Node* statements(void);
 Node* statement(void);
+Node* expression(void);
 Node* assign(void);
 Node* equality(void);
 Node* comp(void);
-Node* expr(void);
+Node* add(void);
 Node* mul(void);
 Node* unary(void);
 Node* primary(void);
 
-void parse(void)
+Node* parse(void)
 {
     initLocalValiablesDict();
-    program();
+    Node* node = block();
+    if (!atEof())
+    {
+        error("Eof expected");
+    }
+    return node;
 }
 
-Node** program(void)
+Node* block(void)
 {
-    while (1)
-    {
-        ProgramBuf[StatementsCount++] = statement();
-        if (atEof()) break;
-    }
-    return ProgramBuf;
+    expect("{");
+    Node* node = statements();
+    return node;
+}
+
+Node* statements(void)
+{
+    Node* node = statement();
+    if (consume("}")) return node;
+
+    node = newNode(NT_STATEMENT, node, statements());
+    return node;
 }
 
 Node* statement(void)
@@ -77,14 +92,19 @@ Node* statement(void)
     Node* node;
     if (consumeType(TT_RETURN))
     {
-        node = assign();
+        node = expression();
         expect(";");
         return newNode(NT_RETURN, node, NULL);
     }
 
-    node = assign();
+    node = expression();
     expect(";");
     return node;
+}
+
+Node* expression(void)
+{
+    return assign();
 }
 
 Node* assign(void)
@@ -119,35 +139,35 @@ Node* equality(void)
 
 Node* comp(void)
 {
-    Node* lhs = expr();
+    Node* lhs = add();
 
     while (1)
     {
         if (consume(">"))
         {
-            lhs = newNode(NT_GREATER     , lhs, expr());
+            lhs = newNode(NT_GREATER     , lhs, add());
             continue;
         }
         if (consume(">="))
         {
-            lhs = newNode(NT_GREATEREQUAL, lhs, expr());
+            lhs = newNode(NT_GREATEREQUAL, lhs, add());
             continue;
         }
         if (consume("<"))
         {
-            lhs = newNode(NT_LESS        , lhs, expr());
+            lhs = newNode(NT_LESS        , lhs, add());
             continue;
         }
         if (consume("<="))
         {
-            lhs = newNode(NT_LESSEQUAL   , lhs, expr());
+            lhs = newNode(NT_LESSEQUAL   , lhs, add());
             continue;
         }
         return lhs;
     }
 }
 
-Node* expr(void)
+Node* add(void)
 {
     Node* lhs = mul();
 
@@ -280,15 +300,9 @@ Node* newIdentNode(char* ident, int len)
 
 
 
-void printProgramTree(void)
+void printProgramTree(Node* node)
 {
-    for (int i = 0; i < StatementsCount; i++)
-    {
-        printf("%d th statement\n", i + 1);
-        printf("\n");
-        printNode(ProgramBuf[i], 0);
-        printf("================================\n");
-    }
+    printNode(node, 0);
 }
 
 void printNode(Node* node, int layer)
@@ -342,6 +356,9 @@ void printNode(Node* node, int layer)
 
         case NT_RETURN:
             printf("%*ctype : RETURN\n", layer * 4, ' ');
+            break;
+        case NT_STATEMENT:
+            printf("%*ctype : STATEMENT\n", layer * 4, ' ');
             break;
     }
 

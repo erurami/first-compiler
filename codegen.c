@@ -9,7 +9,7 @@
 
 bool IsThereReturn;
 
-void genAsm(void)
+void genAsm(Node* node)
 {
     IsThereReturn = false;
 
@@ -21,11 +21,7 @@ void genAsm(void)
     printf("  mov rbp, rsp\n");
     printf("  sub rsp, %d\n", LValDict.ValsCount * 8);
 
-    for (int i = 0; i < StatementsCount; i++)
-    {
-        genAsmSingleStatement(ProgramBuf[i]);
-        printf("  pop rax\n");
-    }
+    genAsmSingleStatement(node);
 
     if (IsThereReturn == false)
     {
@@ -68,6 +64,13 @@ void genAsmSingleStatement(Node* node)
         printf("  pop rdi\n");
         printf("  mov [rdi], rax\n");
         printf("  push rax\n");
+        return;
+    }
+    if (node->Type == NT_STATEMENT)
+    {
+        genAsmSingleStatement(node->Lhs);
+        printf("  pop rax\n");
+        genAsmSingleStatement(node->Rhs);
         return;
     }
     if (node->Type == NT_RETURN)

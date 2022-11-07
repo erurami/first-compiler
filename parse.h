@@ -24,6 +24,7 @@ typedef enum
     NT_ASSIGN,
 
     // flow-controlling
+    NT_STATEMENT,
     NT_RETURN,
 
 } NodeType;
@@ -43,9 +44,9 @@ struct Node
 
 
 
-void parse(void);
+Node* parse(void);
 
-void printProgramTree(void);
+void printProgramTree(Node* node);
 void printNode(Node* node, int layer);
 
 #endif

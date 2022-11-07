@@ -48,9 +48,9 @@ int main(int argc, char** argv)
 
     Tokenize(argv[1]);
 
-    parse();
+    Node* program_tree = parse();
 
-    genAsm();
+    genAsm(program_tree);
 
     return 0;
 }
