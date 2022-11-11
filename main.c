@@ -50,6 +50,8 @@ int main(int argc, char** argv)
 
     Node* program_tree = parse();
 
+    // printProgramTree(program_tree);
+    // printf("\n\n\n\n");
     genAsm(program_tree);
 
     return 0;

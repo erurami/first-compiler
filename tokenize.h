@@ -8,6 +8,9 @@ typedef enum
 
     TT_RESERVED,
     TT_RETURN,
+    TT_IF,
+    TT_ELSE,
+    TT_WHILE,
 
     TT_EOF,
 } TokenType;

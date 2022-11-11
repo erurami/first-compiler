@@ -13,12 +13,36 @@
 int StatementsCount = 0;
 Node* ProgramBuf[100];
 
+
 Node* newNode(NodeType type, Node* lhs, Node* rhs)
 {
     Node* node = calloc(1, sizeof(Node));
     node->Type = type;
     node->Lhs = lhs;
     node->Rhs = rhs;
+    switch (type)
+    {
+        case NT_ADD:
+        case NT_SUB:
+        case NT_MUL:
+        case NT_DIV:
+        case NT_EQUAL:
+        case NT_NEQUAL:
+        case NT_GREATER:
+        case NT_GREATEREQUAL:
+        case NT_LESS:
+        case NT_LESSEQUAL:
+        case NT_ASSIGN:
+            node->HasValue = true;
+            break;
+
+        case NT_IF:
+        case NT_IF_BLOCK:
+        case NT_WHILE:
+        case NT_RETURN:
+            node->HasValue = false;
+            break;
+    }
     return node;
 }
 
@@ -27,6 +51,7 @@ Node* newNumNode(int value)
     Node* node = calloc(1, sizeof(Node));
     node->Type = NT_NUM;
     node->Value = value;
+    node->HasValue = true;
     return node;
 }
 
@@ -38,6 +63,8 @@ void initLocalValiablesDict(void);
 // statements = statement (statements | '}')?
 // statement = expression ';'
 //           | 'return' expression ';'
+//           | 'if' '(' expression ')' block ('else' block)?
+//           | 'while' '(' expression ')' block
 // expression = assign
 // assign = equality ('=' assign)?
 // equality = comp ( '==' comp | '!-' comp)*
@@ -47,6 +74,8 @@ void initLocalValiablesDict(void);
 // unary = ('+' | '-')? primary
 // primary = num | ident | '(' assign ')'
 
+int IfCount;
+int WhileCount;
 
 Node* block(void);
 Node* statements(void);
@@ -63,6 +92,8 @@ Node* primary(void);
 Node* parse(void)
 {
     initLocalValiablesDict();
+    IfCount = 1;
+    WhileCount = 1;
     Node* node = block();
     if (!atEof())
     {
@@ -95,6 +126,32 @@ Node* statement(void)
         node = expression();
         expect(";");
         return newNode(NT_RETURN, node, NULL);
+    }
+    if (consumeType(TT_IF))
+    {
+        expect("(");
+        Node* if_cond = expression();
+        expect(")");
+        node = newNode(NT_IF_BLOCK, block(), NULL);
+        if (consumeType(TT_ELSE))
+        {
+            node->Rhs = block();
+        }
+        node->IfId = IfCount;
+        node = newNode(NT_IF, if_cond, node);
+        node->IfId = IfCount;
+        IfCount++;
+        return node;
+    }
+    if (consumeType(TT_WHILE))
+    {
+        expect("(");
+        Node* while_cond = expression();
+        expect(")");
+        node = newNode(NT_WHILE, while_cond, block());
+        node->WhileId = WhileCount;
+        WhileCount++;
+        return node;
     }
 
     node = expression();
@@ -307,6 +364,10 @@ void printProgramTree(Node* node)
 
 void printNode(Node* node, int layer)
 {
+    if (node == NULL)
+    {
+        return;
+    }
     switch (node->Type)
     {
         case NT_NUM:
@@ -359,6 +420,19 @@ void printNode(Node* node, int layer)
             break;
         case NT_STATEMENT:
             printf("%*ctype : STATEMENT\n", layer * 4, ' ');
+            break;
+
+        case NT_IF:
+            printf("%*ctype : IF\n", layer * 4, ' ');
+            printf("%*cifid : %d\n", layer * 4, ' ', node->IfId);
+            break;
+        case NT_IF_BLOCK:
+            printf("%*ctype : IF_BLOCK\n", layer * 4, ' ');
+            printf("%*cifid : %d\n", layer * 4, ' ', node->IfId);
+            break;
+
+        case NT_WHILE:
+            printf("%*ctype : WHILE\n", layer * 4, ' ');
             break;
     }
 

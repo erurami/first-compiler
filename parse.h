@@ -2,6 +2,8 @@
 #ifndef _PARSE_H_INCLUDE_
 #define _PARSE_H_INCLUDE_
 
+#include <stdbool.h>
+
 typedef enum
 {
     // val and literal
@@ -27,6 +29,11 @@ typedef enum
     NT_STATEMENT,
     NT_RETURN,
 
+    NT_IF,
+    NT_IF_BLOCK,
+
+    NT_WHILE,
+
 } NodeType;
 
 typedef struct Node Node;
@@ -36,10 +43,17 @@ struct Node
     NodeType Type;
     Node* Lhs;
     Node* Rhs;
+
     int Value;
+
     int LValOffset;
     char* pLValName;
     int LValNameLen;
+
+    int IfId;
+    int WhileId;
+
+    bool HasValue;
 };
 
 

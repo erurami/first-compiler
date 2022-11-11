@@ -156,6 +156,36 @@ void Tokenize(char* p)
             continue;
         }
 
+        if (strncmp(p, "if", 2) == 0)
+        {
+            if (isIdentChar(*(p + 2)) == false)
+            {
+                cur = newToken(TT_IF, cur, p, 2);
+                p += 2;
+            }
+            continue;
+        }
+
+        if (strncmp(p, "else", 4) == 0)
+        {
+            if (isIdentChar(*(p + 4)) == false)
+            {
+                cur = newToken(TT_ELSE, cur, p, 4);
+                p += 4;
+            }
+            continue;
+        }
+
+        if (strncmp(p, "while", 5) == 0)
+        {
+            if (isIdentChar(*(p + 5)) == false)
+            {
+                cur = newToken(TT_WHILE, cur, p, 5);
+                p += 5;
+            }
+            continue;
+        }
+
         bool operator_found = false;
         for (int i = 0; i < OPERATORS_COUNT; i++)
         {

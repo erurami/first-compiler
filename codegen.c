@@ -43,6 +43,7 @@ void genAddr(Node* node)
 
 void genAsmSingleStatement(Node* node)
 {
+    if (node == NULL) return;
     if (node->Type == NT_LVAL)
     {
         genAddr(node);
@@ -69,8 +70,9 @@ void genAsmSingleStatement(Node* node)
     if (node->Type == NT_STATEMENT)
     {
         genAsmSingleStatement(node->Lhs);
-        printf("  pop rax\n");
+        if (node->Lhs->HasValue) printf("  pop rax\n");
         genAsmSingleStatement(node->Rhs);
+        if (node->Rhs->HasValue) printf("  pop rax\n");
         return;
     }
     if (node->Type == NT_RETURN)
@@ -83,6 +85,31 @@ void genAsmSingleStatement(Node* node)
 
         printf("  ret\n");
         IsThereReturn = true;
+        return;
+    }
+    if (node->Type == NT_IF)
+    {
+        genAsmSingleStatement(node->Lhs);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .Lelse%03d\n", node->IfId);
+        genAsmSingleStatement(node->Rhs->Lhs);
+        printf("  jmp .Lend%03d\n", node->IfId);
+        printf(".Lelse%03d:\n", node->IfId);
+        genAsmSingleStatement(node->Rhs->Rhs);
+        printf(".Lend%03d:\n", node->IfId);
+        return;
+    }
+    if (node->Type == NT_WHILE)
+    {
+        printf(".Lwhilestart%03d:\n", node->WhileId);
+        genAsmSingleStatement(node->Lhs);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .Lwhileend%03d\n", node->WhileId);
+        genAsmSingleStatement(node->Rhs);
+        printf("  jmp .Lwhilestart%03d\n", node->WhileId);
+        printf(".Lwhileend%03d:\n", node->WhileId);
         return;
     }
 
