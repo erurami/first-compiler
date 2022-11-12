@@ -9,6 +9,8 @@
 
 bool IsThereReturn;
 
+void genAsmSingleStatement(Node* node);
+
 void genAsm(Node* node)
 {
     IsThereReturn = false;
@@ -26,6 +28,40 @@ void genAsm(Node* node)
     if (IsThereReturn == false)
     {
         error("no return statement.");
+    }
+}
+
+void genFuncParamPassingAsm(Node* node, int paramCount)
+{
+    for (int i = 0 ; i < paramCount; i++)
+    {
+        genAsmSingleStatement(node->Lhs);
+        node = node->Rhs;
+    }
+
+    for (int i = paramCount; i > 0; i--)
+    {
+        switch (i)
+        {
+            case 1:
+                printf("  pop rdi\n");
+                break;
+            case 2:
+                printf("  pop rsi\n");
+                break;
+            case 3:
+                printf("  pop rdx\n");
+                break;
+            case 4:
+                printf("  pop rcx\n");
+                break;
+            case 5:
+                printf("  pop r8\n");
+                break;
+            case 6:
+                printf("  pop r9\n");
+                break;
+        }
     }
 }
 
@@ -110,6 +146,18 @@ void genAsmSingleStatement(Node* node)
         genAsmSingleStatement(node->Rhs);
         printf("  jmp .Lwhilestart%03d\n", node->WhileId);
         printf(".Lwhileend%03d:\n", node->WhileId);
+        return;
+    }
+    if (node->Type == NT_FUNCTION)
+    {
+        if (node->FuncParamCount > 6)
+        {
+            error("function with more the 6 parameters is not suppoted.");
+        }
+        genFuncParamPassingAsm(node->Rhs, node->FuncParamCount);
+        printf("  mov rax, %d\n", node->FuncParamCount);
+        printf("  call %.*s\n", node->FuncNameLen, node->pFuncName);
+        printf("  push rax\n");
         return;
     }
 

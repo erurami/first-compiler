@@ -48,6 +48,8 @@ int main(int argc, char** argv)
 
     Tokenize(argv[1]);
 
+    // printTokens();
+
     Node* program_tree = parse();
 
     // printProgramTree(program_tree);

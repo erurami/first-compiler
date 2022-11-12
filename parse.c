@@ -72,7 +72,9 @@ void initLocalValiablesDict(void);
 // add = mul ( '+' mul | '-' mul)*
 // mul = primary ( '*' primary | '/' primary )*
 // unary = ('+' | '-')? primary
-// primary = num | ident | '(' assign ')'
+// primary = num
+//         | ident ('(' ')')?
+//         | '(' assign ')'
 
 int IfCount;
 int WhileCount;
@@ -296,14 +298,41 @@ Node* primary(void)
     {
         node = equality();
         expect(")");
+        return node;
     }
-    else if (ident = consumeIdent(&ident_len))
+    if (ident = consumeIdent(&ident_len))
     {
+        if (consume("("))
+        {
+            node = newNode(NT_FUNCTION, NULL, NULL);
+            node->pFuncName = ident;
+            node->FuncNameLen = ident_len;
+            node->FuncParamCount = 0;
+
+            if (consume(")")) return node;
+
+            Node* node_function = node;
+
+            while (1)
+            {
+                node->Rhs = newNode(NT_FUNCTION_PARAM, expression(), NULL);
+                node = node->Rhs;
+                node_function->FuncParamCount++;
+                if (!consume(","))
+                {
+                    expect(")");
+                    break;
+                }
+            }
+            return node_function;
+        }
         node = newIdentNode(ident, ident_len);
+        return node;
     }
     else
     {
         node = newNumNode(expectNum());
+        return node;
     }
 
     return node;
@@ -352,6 +381,7 @@ Node* newIdentNode(char* ident, int len)
     node->LValOffset = getLValId(ident, len) * 8;
     node->pLValName = ident;
     node->LValNameLen = len;
+    node->HasValue = true;
 }
 
 
@@ -377,6 +407,15 @@ void printNode(Node* node, int layer)
         case NT_LVAL:
             printf("%*ctype : LVAL\n", layer * 4, ' ');
             printf("%*cvalue id : %d\n", layer * 4, ' ', node->LValOffset / 8);
+            break;
+
+        case NT_FUNCTION:
+            printf("%*ctype : FUNCTION\n", layer * 4, ' ');
+            printf("%*cname : %.*s\n", layer * 4, ' ', node->FuncNameLen, node->pFuncName);
+            printf("%*cparam count : %d\n", layer * 4, ' ', node->FuncParamCount);
+            break;
+        case NT_FUNCTION_PARAM:
+            printf("%*ctype : FUNCTION_PARAM\n", layer * 4, ' ');
             break;
 
         case NT_ADD:

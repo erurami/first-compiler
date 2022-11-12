@@ -10,7 +10,7 @@
 
 static Token* token;
 
-int OPERATORS_COUNT = 16;
+int OPERATORS_COUNT = 17;
 
 char* operators[] = \
 {
@@ -20,6 +20,7 @@ char* operators[] = \
     "<",
     "==",
     "!=",
+    ",",
     "{",
     "}",
     "=",
@@ -152,8 +153,8 @@ void Tokenize(char* p)
             {
                 cur = newToken(TT_RETURN, cur, p, 6);
                 p += 6;
+                continue;
             }
-            continue;
         }
 
         if (strncmp(p, "if", 2) == 0)
@@ -162,8 +163,8 @@ void Tokenize(char* p)
             {
                 cur = newToken(TT_IF, cur, p, 2);
                 p += 2;
+                continue;
             }
-            continue;
         }
 
         if (strncmp(p, "else", 4) == 0)
@@ -172,8 +173,8 @@ void Tokenize(char* p)
             {
                 cur = newToken(TT_ELSE, cur, p, 4);
                 p += 4;
+                continue;
             }
-            continue;
         }
 
         if (strncmp(p, "while", 5) == 0)
@@ -182,8 +183,8 @@ void Tokenize(char* p)
             {
                 cur = newToken(TT_WHILE, cur, p, 5);
                 p += 5;
+                continue;
             }
-            continue;
         }
 
         bool operator_found = false;

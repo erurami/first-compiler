@@ -10,6 +10,10 @@ typedef enum
     NT_NUM,
     NT_LVAL,
 
+    // function call
+    NT_FUNCTION,
+    NT_FUNCTION_PARAM,
+
     // operators
     NT_ADD,
     NT_SUB,
@@ -54,6 +58,10 @@ struct Node
     int WhileId;
 
     bool HasValue;
+
+    char* pFuncName;
+    int FuncNameLen;
+    int FuncParamCount;
 };
 
 
