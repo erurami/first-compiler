@@ -10,18 +10,16 @@
 bool IsThereReturn;
 
 void genAsmSingleStatement(Node* node);
+void genAddr(Node* node);
 
 void genAsm(Node* node)
 {
     IsThereReturn = false;
 
     printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
-
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", LValDict.ValsCount * 8);
+    printf(".global ");
+    printFunctionNames();
+    printf("\n");
 
     genAsmSingleStatement(node);
 
@@ -65,6 +63,46 @@ void genFuncParamPassingAsm(Node* node, int paramCount)
     }
 }
 
+void genAsmFunctionArgPrologue(Node* node)
+{
+    if (node == NULL) return;
+    Node* argument_node;
+    for (int i = 0; i < 6; i++)
+    {
+        argument_node = node;
+        if (node->Type == NT_FUNCTION_ARGUMENT) argument_node = node->Lhs;
+
+        genAddr(argument_node);
+        printf("  pop rax\n");
+        switch (i)
+        {
+            case 0:
+                printf("  mov [rax], rdi\n");
+                break;
+            case 1:
+                printf("  mov [rax], rsi\n");
+                break;
+            case 2:
+                printf("  mov [rax], rdx\n");
+                break;
+            case 3:
+                printf("  mov [rax], rcx\n");
+                break;
+            case 4:
+                printf("  mov [rax], r8\n");
+                break;
+            case 5:
+                printf("  mov [rax], r9\n");
+                break;
+        }
+
+        if (node->Type != NT_FUNCTION_ARGUMENT) return;
+        node = node->Rhs;
+    }
+    error("cannnot declare function with more than 6 arguments");
+    return;
+}
+
 void genAddr(Node* node)
 {
     if (node->Type != NT_LVAL)
@@ -80,6 +118,23 @@ void genAddr(Node* node)
 void genAsmSingleStatement(Node* node)
 {
     if (node == NULL) return;
+    if (node->Type == NT_PROGRAM)
+    {
+        genAsmSingleStatement(node->Lhs);
+        genAsmSingleStatement(node->Rhs);
+        return;
+    }
+    if (node->Type == NT_FUNCTION_DEF)
+    {
+        printf("%.*s:\n", node->FuncNameLen, node->pFuncName);
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, %d\n", node->FuncLocalVCount * 8);
+
+        genAsmFunctionArgPrologue(node->Lhs);
+        genAsmSingleStatement(node->Rhs);
+        return;
+    }
     if (node->Type == NT_LVAL)
     {
         genAddr(node);
@@ -148,7 +203,7 @@ void genAsmSingleStatement(Node* node)
         printf(".Lwhileend%03d:\n", node->WhileId);
         return;
     }
-    if (node->Type == NT_FUNCTION)
+    if (node->Type == NT_FUNCTION_CALL)
     {
         if (node->FuncParamCount > 6)
         {

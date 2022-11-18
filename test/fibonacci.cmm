@@ -1,0 +1,29 @@
+
+printnext(a, b)
+{
+    if (a > 10000)
+    {
+        putChar(69);
+        putChar(78);
+        putChar(68);
+        putChar(10);
+        return 0;
+    }
+    nextval = a + b;
+    printNum(nextval);
+    putChar(10);
+    printnext(b, nextval);
+    return 0;
+}
+
+main ()
+{
+    printNum(1);
+    putChar(10);
+    printNum(1);
+    putChar(10);
+    printnext(1, 1);
+    return 0;
+}
+
+

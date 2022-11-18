@@ -1,0 +1,11 @@
+main ()
+{
+    a = 33;
+    while (a < 127)
+    {
+        putChar(a);
+        a = a + 1;
+    }
+    putChar(10);
+    return a;
+}

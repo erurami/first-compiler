@@ -14,6 +14,20 @@ int StatementsCount = 0;
 Node* ProgramBuf[100];
 
 
+char** FunctionsName;
+typedef struct FunctionName FunctionName;
+
+struct FunctionName
+{
+    char* Name;
+    int Len;
+    FunctionName* Next;
+};
+
+FunctionName* FunctionNames;
+FunctionName* FunctionNameCur;
+
+
 Node* newNode(NodeType type, Node* lhs, Node* rhs)
 {
     Node* node = calloc(1, sizeof(Node));
@@ -59,6 +73,9 @@ Node* newIdentNode(char* ident, int len);
 
 void initLocalValiablesDict(void);
 
+// program = function*
+// function = ident '(' ')' block
+// arglist = (ident ',')* ident?
 // block = '{' statements
 // statements = statement (statements | '}')?
 // statement = expression ';'
@@ -73,12 +90,15 @@ void initLocalValiablesDict(void);
 // mul = primary ( '*' primary | '/' primary )*
 // unary = ('+' | '-')? primary
 // primary = num
-//         | ident ('(' ')')?
+//         | ident ('(' (expression (',' expression)*)? ')')?
 //         | '(' assign ')'
 
 int IfCount;
 int WhileCount;
 
+Node* program(void);
+Node* function(void);
+Node* arglist(void);
 Node* block(void);
 Node* statements(void);
 Node* statement(void);
@@ -90,17 +110,70 @@ Node* add(void);
 Node* mul(void);
 Node* unary(void);
 Node* primary(void);
+Node* lval(void);
 
 Node* parse(void)
 {
-    initLocalValiablesDict();
     IfCount = 1;
     WhileCount = 1;
-    Node* node = block();
-    if (!atEof())
+
+    Node* node;
+
+    FunctionName fn_head;
+    FunctionNameCur = &fn_head;
+
+    node = program();
+
+    FunctionNames = fn_head.Next;
+
+    return node;
+}
+
+Node* program(void)
+{
+    Node* node = function();
+    if (atEof()) return node;
+
+    node = newNode(NT_PROGRAM, node, program());
+    return node;
+}
+
+Node* function(void)
+{
+    initLocalValiablesDict();
+
+    int function_name_len;
+    char* function_name = consumeIdent(&function_name_len);
+
+    expect("(");
+
+    Node* arglist_node = NULL;
+    if (!consume(")"))
     {
-        error("Eof expected");
+        arglist_node = arglist();
     }
+
+    Node* node = newNode(NT_FUNCTION_DEF, arglist_node, block());
+    node->pFuncName = function_name;
+    node->FuncNameLen = function_name_len;
+    node->FuncLocalVCount = LValDict.ValsCount;
+
+    FunctionName* func_name = (FunctionName*)calloc(1, sizeof(FunctionName));
+    func_name->Name = node->pFuncName;
+    func_name->Len  = node->FuncNameLen;
+    FunctionNameCur->Next = func_name;
+    FunctionNameCur = FunctionNameCur->Next;
+
+    return node;
+}
+
+Node* arglist(void)
+{
+    Node* node = lval();
+    if (consume(")")) return node;
+    expect(",");
+
+    node = newNode(NT_FUNCTION_ARGUMENT, node, arglist());
     return node;
 }
 
@@ -304,7 +377,7 @@ Node* primary(void)
     {
         if (consume("("))
         {
-            node = newNode(NT_FUNCTION, NULL, NULL);
+            node = newNode(NT_FUNCTION_CALL, NULL, NULL);
             node->pFuncName = ident;
             node->FuncNameLen = ident_len;
             node->FuncParamCount = 0;
@@ -315,7 +388,7 @@ Node* primary(void)
 
             while (1)
             {
-                node->Rhs = newNode(NT_FUNCTION_PARAM, expression(), NULL);
+                node->Rhs = newNode(NT_FUNCTION_CALL_PARAM, expression(), NULL);
                 node = node->Rhs;
                 node_function->FuncParamCount++;
                 if (!consume(","))
@@ -336,6 +409,14 @@ Node* primary(void)
     }
 
     return node;
+}
+
+Node* lval(void)
+{
+    int ident_len;
+    char* ident = consumeIdent(&ident_len);
+
+    return newIdentNode(ident, ident_len);
 }
 
 
@@ -409,13 +490,13 @@ void printNode(Node* node, int layer)
             printf("%*cvalue id : %d\n", layer * 4, ' ', node->LValOffset / 8);
             break;
 
-        case NT_FUNCTION:
-            printf("%*ctype : FUNCTION\n", layer * 4, ' ');
+        case NT_FUNCTION_CALL:
+            printf("%*ctype : FUNCTION_CALL\n", layer * 4, ' ');
             printf("%*cname : %.*s\n", layer * 4, ' ', node->FuncNameLen, node->pFuncName);
             printf("%*cparam count : %d\n", layer * 4, ' ', node->FuncParamCount);
             break;
-        case NT_FUNCTION_PARAM:
-            printf("%*ctype : FUNCTION_PARAM\n", layer * 4, ' ');
+        case NT_FUNCTION_CALL_PARAM:
+            printf("%*ctype : FUNCTION_CALL_PARAM\n", layer * 4, ' ');
             break;
 
         case NT_ADD:
@@ -473,6 +554,20 @@ void printNode(Node* node, int layer)
         case NT_WHILE:
             printf("%*ctype : WHILE\n", layer * 4, ' ');
             break;
+
+        case NT_FUNCTION_ARGUMENT:
+            printf("%*ctype : FUNCTION_ARGUMENT\n", layer * 4, ' ');
+            break;
+
+        case NT_FUNCTION_DEF:
+            printf("%*ctype : FUNCTION_DEF\n", layer * 4, ' ');
+            printf("%*cfunction name : %.*s\n", layer * 4, ' ', node->FuncNameLen, node->pFuncName);
+            printf("%*cfunction name len : %d\n", layer * 4, ' ', node->FuncNameLen);
+            break;
+
+        case NT_PROGRAM:
+            printf("%*ctype : PROGRAM\n", layer * 4, ' ');
+            break;
     }
 
     if (node->Type == NT_RETURN)
@@ -488,3 +583,19 @@ void printNode(Node* node, int layer)
         printNode(node->Rhs, layer + 1);
     }
 }
+
+void printFunctionNames(void)
+{
+    FunctionName* cur = FunctionNames;
+
+    bool first_node = true;
+    while (cur != NULL)
+    {
+        if (first_node == false) printf(", ");
+        printf("%.*s", cur->Len, cur->Name);
+        first_node = false;
+        cur = cur->Next;
+    }
+
+}
+

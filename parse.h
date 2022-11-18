@@ -11,8 +11,8 @@ typedef enum
     NT_LVAL,
 
     // function call
-    NT_FUNCTION,
-    NT_FUNCTION_PARAM,
+    NT_FUNCTION_CALL,
+    NT_FUNCTION_CALL_PARAM,
 
     // operators
     NT_ADD,
@@ -38,10 +38,16 @@ typedef enum
 
     NT_WHILE,
 
+    // base
+    NT_FUNCTION_ARGUMENT,
+    NT_FUNCTION_DEF,
+
+    NT_PROGRAM,
 } NodeType;
 
 typedef struct Node Node;
 
+// TODO: make general perpose member e.g. Str to store string.
 struct Node
 {
     NodeType Type;
@@ -62,6 +68,8 @@ struct Node
     char* pFuncName;
     int FuncNameLen;
     int FuncParamCount;
+
+    int FuncLocalVCount;
 };
 
 
@@ -70,6 +78,8 @@ Node* parse(void);
 
 void printProgramTree(Node* node);
 void printNode(Node* node, int layer);
+
+void printFunctionNames(void);
 
 #endif
 
