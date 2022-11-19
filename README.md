@@ -28,6 +28,129 @@ The difference of ```consume...()``` and ```expect...()``` is the action when th
 
 ## Parse
 
+
+In order to convert array of token to tree structure of the program, I used recursive descent parsing.
+
+**The tree structure has many point to improve. So I'm welcome for any improvement especially for this section of code.**
+
+Here is the syntax of currently supporting programming language in BNF
+
+```
+program = function*
+function = ident '(' ')' block
+arglist = (ident ',')* ident?
+block = '{' statements
+statements = statement (statements | '}')?
+statement = expression ';'
+          | 'return' expression ';'
+          | 'if' '(' expression ')' block ('else' block)?
+          | 'while' '(' expression ')' block
+expression = assign
+assign = equality ('=' assign)?
+equality = comp ( '==' comp | '!-' comp)*
+comp = add ( '>' add | '>=' add | '<' add | '<=' add)*
+add = mul ( '+' mul | '-' mul)*
+mul = primary ( '*' primary | '/' primary )*
+unary = ('+' | '-')? primary
+primary = num
+        | ident ('(' (expression (',' expression)*)? ')')?
+        | '(' assign ')'
+```
+
+Here is an example.
+
+```
+myadd (a, b)
+{
+    return a + b;
+}
+
+main ()
+{
+    i = 0;
+    while (i < 10)
+    {
+        i = myadd(i, 1);
+    }
+    return i;
+}
+```
+
+This program is converted to tree structure like this.
+
+```
+ type : PROGRAM
+    type : FUNCTION_DEF
+    function name : myadd
+    function name len : 5
+        type : FUNCTION_ARGUMENT
+            type : LVAL
+            value id : 1
+            type : LVAL
+            value id : 2
+        type : RETURN
+            type : ADD
+                type : LVAL
+                value id : 1
+                type : LVAL
+                value id : 2
+    type : FUNCTION_DEF
+    function name : main
+    function name len : 4
+        type : STATEMENT
+            type : ASSIGN
+                type : LVAL
+                value id : 1
+                type : NUM
+                value : 0
+            type : STATEMENT
+                type : WHILE
+                    type : LESS
+                        type : LVAL
+                        value id : 1
+                        type : NUM
+                        value : 10
+                    type : ASSIGN
+                        type : LVAL
+                        value id : 1
+                        type : FUNCTION_CALL
+                        name : myadd
+                        param count : 2
+                            type : FUNCTION_CALL_PARAM
+                                type : LVAL
+                                value id : 1
+                                type : FUNCTION_CALL_PARAM
+                                    type : NUM
+                                    value : 1
+                type : RETURN
+                    type : LVAL
+                    value id : 1
+```
+
+
+
+### Tree program structure
+
+Each node of the tree has These following members;
+
+* NodeType which 
+* Lhs and Rhs which stands for Left/Right hand side node.
+* Additional information for specific node. e.g. (Function name for NT_FUNCTRION, value for NT_NUM)
+
+### Tree Node types
+
+#### NT_PROGRAM
+
+#### NT_FUNCTION_DEF
+
+
 ## Codegen
+
+Outputs assembly from tree structure of the program.
+
+The assembly follows System V ABI. (I just followed the steps on the site. Therefore, there may be codes that are outputting wrong asm)
+
+
+
 
 
