@@ -54,7 +54,12 @@ struct Node
     Node* Lhs;
     Node* Rhs;
 
-    int Value;
+    int   Value;
+    char* Str;
+    int   Len
+
+    bool HasValue;
+
 
     int LValOffset;
     char* pLValName;
@@ -62,8 +67,6 @@ struct Node
 
     int IfId;
     int WhileId;
-
-    bool HasValue;
 
     char* pFuncName;
     int FuncNameLen;
