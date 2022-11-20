@@ -34,16 +34,7 @@ char* operators[] = \
 };
 
 
-bool isIdentChar(char chara)
-{
-    if (('a' <= chara && chara <= 'z') ||
-        ('A' <= chara && chara <= 'Z') ||
-        ('0' <= chara && chara <= '9'))
-    {
-        return true;
-    }
-    return false;
-}
+bool isIdentChar(char chara);
 
 int expectNum(void)
 {
@@ -122,9 +113,9 @@ Token* newToken(TokenType type, Token* cur, char* str, int len)
 }
 
 // is (p) token (token) ?  -> true/false
-bool isToken(char* p, char* token, int len)
+bool isOperator(char* p, char* op, int len)
 {
-    if (memcmp(p, token, len) == 0)
+    if (memcmp(p, op, len) == 0)
     {
         return true;
     }
@@ -133,6 +124,9 @@ bool isToken(char* p, char* token, int len)
         return false;
     }
 }
+
+#define IS_NEXT_IDENT(string, len) \
+    (strncmp(p, string, len) == 0) && (isIdentChar(*(p + len)) == false)
 
 void Tokenize(char* p)
 {
@@ -147,51 +141,39 @@ void Tokenize(char* p)
             continue;
         }
 
-        if (strncmp(p, "return", 6) == 0)
+        if (IS_NEXT_IDENT("return", 6))
         {
-            if (isIdentChar(*(p + 6)) == false)
-            {
-                cur = newToken(TT_RETURN, cur, p, 6);
-                p += 6;
-                continue;
-            }
+            cur = newToken(TT_RETURN, cur, p, 6);
+            p += 6;
+            continue;
         }
 
-        if (strncmp(p, "if", 2) == 0)
+        if (IS_NEXT_IDENT("if", 2))
         {
-            if (isIdentChar(*(p + 2)) == false)
-            {
-                cur = newToken(TT_IF, cur, p, 2);
-                p += 2;
-                continue;
-            }
+            cur = newToken(TT_IF, cur, p, 2);
+            p += 2;
+            continue;
         }
 
-        if (strncmp(p, "else", 4) == 0)
+        if (IS_NEXT_IDENT("else", 4))
         {
-            if (isIdentChar(*(p + 4)) == false)
-            {
-                cur = newToken(TT_ELSE, cur, p, 4);
-                p += 4;
-                continue;
-            }
+            cur = newToken(TT_ELSE, cur, p, 4);
+            p += 4;
+            continue;
         }
 
-        if (strncmp(p, "while", 5) == 0)
+        if (IS_NEXT_IDENT("while", 5))
         {
-            if (isIdentChar(*(p + 5)) == false)
-            {
-                cur = newToken(TT_WHILE, cur, p, 5);
-                p += 5;
-                continue;
-            }
+            cur = newToken(TT_WHILE, cur, p, 5);
+            p += 5;
+            continue;
         }
 
         bool operator_found = false;
         for (int i = 0; i < OPERATORS_COUNT; i++)
         {
             int len = strlen(operators[i]);
-            if (isToken(p, operators[i], len))
+            if (isOperator(p, operators[i], len))
             {
                 cur = newToken(TT_RESERVED, cur, p, len);
                 p += len;
@@ -247,8 +229,33 @@ void printTokens(void)
                 printf("type : NUM\n");
                 printf("Num : %d", cur->Value);
                 break;
+            case TT_RETURN:
+                printf("type : RETURN\n");
+                break;
+            case TT_IF:
+                printf("type : IF\n");
+                break;
+            case TT_ELSE:
+                printf("type : ELSE\n");
+                break;
+            case TT_WHILE:
+                printf("type : WHILE\n");
+                break;
         }
         cur = cur->Next;
     }
+}
+
+bool isIdentChar(char chara)
+{
+    if (('a' <= chara && chara <= 'z') ||
+        ('A' <= chara && chara <= 'Z') ||
+        ('0' <= chara && chara <= '9') ||
+        (chara == '_') ||
+        (chara == '?'))
+    {
+        return true;
+    }
+    return false;
 }
 
