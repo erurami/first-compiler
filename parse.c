@@ -10,11 +10,6 @@
 #include "tokenize.h"
 
 
-int StatementsCount = 0;
-Node* ProgramBuf[100];
-
-
-char** FunctionsName;
 typedef struct FunctionName FunctionName;
 
 struct FunctionName
@@ -24,74 +19,28 @@ struct FunctionName
     FunctionName* Next;
 };
 
+
+struct LValDictStruct
+{
+    char** Vals;
+    int ValsCount;
+};
+
+extern struct LValDictStruct LValDict;
+
+
+// stores function names that appears in the code.
 FunctionName* FunctionNames;
 FunctionName* FunctionNameCur;
 
 
-Node* newNode(NodeType type, Node* lhs, Node* rhs)
-{
-    Node* node = calloc(1, sizeof(Node));
-    node->Type = type;
-    node->Lhs = lhs;
-    node->Rhs = rhs;
-    switch (type)
-    {
-        case NT_ADD:
-        case NT_SUB:
-        case NT_MUL:
-        case NT_DIV:
-        case NT_EQUAL:
-        case NT_NEQUAL:
-        case NT_GREATER:
-        case NT_GREATEREQUAL:
-        case NT_LESS:
-        case NT_LESSEQUAL:
-        case NT_ASSIGN:
-            node->HasValue = true;
-            break;
+// functions for new node
+Node* newNode(NodeType type, Node* lhs, Node* rhs);
+Node* newNumNode(int value);
+Node* newLvalNode(char* ident, int len);
 
-        case NT_IF:
-        case NT_IF_BLOCK:
-        case NT_WHILE:
-        case NT_RETURN:
-            node->HasValue = false;
-            break;
-    }
-    return node;
-}
-
-Node* newNumNode(int value)
-{
-    Node* node = calloc(1, sizeof(Node));
-    node->Type = NT_NUM;
-    node->Value = value;
-    node->HasValue = true;
-    return node;
-}
-
-Node* newIdentNode(char* ident, int len);
 
 void initLocalValiablesDict(void);
-
-// program = function*
-// function = ident '(' ')' block
-// arglist = (ident ',')* ident?
-// block = '{' statements
-// statements = statement (statements | '}')?
-// statement = expression ';'
-//           | 'return' expression ';'
-//           | 'if' '(' expression ')' block ('else' block)?
-//           | 'while' '(' expression ')' block
-// expression = assign
-// assign = equality ('=' assign)?
-// equality = comp ( '==' comp | '!-' comp)*
-// comp = add ( '>' add | '>=' add | '<' add | '<=' add)*
-// add = mul ( '+' mul | '-' mul)*
-// mul = primary ( '*' primary | '/' primary )*
-// unary = ('+' | '-')? primary
-// primary = num
-//         | ident ('(' (expression (',' expression)*)? ')')?
-//         | '(' assign ')'
 
 int IfCount;
 int WhileCount;
@@ -399,7 +348,7 @@ Node* primary(void)
             }
             return node_function;
         }
-        node = newIdentNode(ident, ident_len);
+        node = newLvalNode(ident, ident_len);
         return node;
     }
     else
@@ -416,11 +365,13 @@ Node* lval(void)
     int ident_len;
     char* ident = consumeIdent(&ident_len);
 
-    return newIdentNode(ident, ident_len);
+    return newLvalNode(ident, ident_len);
 }
 
 
 
+
+// Dictionaly for local variables
 struct LValDictStruct LValDict;
 
 void initLocalValiablesDict(void)
@@ -454,16 +405,6 @@ int getLValId(char* ident, int len)
     return ++LValDict.ValsCount;
 }
 
-
-Node* newIdentNode(char* ident, int len)
-{
-    Node* node;
-    node = newNode(NT_LVAL, NULL, NULL);
-    node->LValOffset = getLValId(ident, len) * 8;
-    node->pLValName = ident;
-    node->LValNameLen = len;
-    node->HasValue = true;
-}
 
 
 
@@ -597,5 +538,57 @@ void printFunctionNames(void)
         cur = cur->Next;
     }
 
+}
+
+
+Node* newNode(NodeType type, Node* lhs, Node* rhs)
+{
+    Node* node = calloc(1, sizeof(Node));
+    node->Type = type;
+    node->Lhs = lhs;
+    node->Rhs = rhs;
+    switch (type)
+    {
+        case NT_ADD:
+        case NT_SUB:
+        case NT_MUL:
+        case NT_DIV:
+        case NT_EQUAL:
+        case NT_NEQUAL:
+        case NT_GREATER:
+        case NT_GREATEREQUAL:
+        case NT_LESS:
+        case NT_LESSEQUAL:
+        case NT_ASSIGN:
+            node->HasValue = true;
+            break;
+
+        case NT_IF:
+        case NT_IF_BLOCK:
+        case NT_WHILE:
+        case NT_RETURN:
+            node->HasValue = false;
+            break;
+    }
+    return node;
+}
+
+Node* newNumNode(int value)
+{
+    Node* node = calloc(1, sizeof(Node));
+    node->Type = NT_NUM;
+    node->Value = value;
+    node->HasValue = true;
+    return node;
+}
+
+Node* newLvalNode(char* ident, int len)
+{
+    Node* node;
+    node = newNode(NT_LVAL, NULL, NULL);
+    node->LValOffset = getLValId(ident, len) * 8;
+    node->pLValName = ident;
+    node->LValNameLen = len;
+    node->HasValue = true;
 }
 
