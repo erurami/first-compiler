@@ -6,9 +6,20 @@
 
 typedef enum
 {
-    // val and literal
-    NT_NUM,
-    NT_LVAL,
+    NT_PROGRAM,
+
+    // global
+    NT_FUNCTION_DEF,
+    NT_FUNCTION_ARGUMENT,
+
+    // flow-controlling
+    NT_STATEMENT,
+    NT_RETURN,
+
+    NT_IF,
+    NT_IF_BLOCK,
+
+    NT_WHILE,
 
     // function call
     NT_FUNCTION_CALL,
@@ -29,20 +40,9 @@ typedef enum
 
     NT_ASSIGN,
 
-    // flow-controlling
-    NT_STATEMENT,
-    NT_RETURN,
-
-    NT_IF,
-    NT_IF_BLOCK,
-
-    NT_WHILE,
-
-    // base
-    NT_FUNCTION_ARGUMENT,
-    NT_FUNCTION_DEF,
-
-    NT_PROGRAM,
+    // val and literal
+    NT_NUM,
+    NT_LVAL,
 } NodeType;
 
 typedef struct Node Node;
@@ -74,6 +74,8 @@ struct Node
 
 
 
+// Parses the code just tokenized
+// Returns the root node of the tree of the program
 Node* parse(void);
 
 void printProgramTree(Node* node);
