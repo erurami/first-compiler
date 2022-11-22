@@ -30,101 +30,86 @@ void genAsmRecursive(Node* node)
 {
     if (node == NULL) return;
 
-    if (node->Type == NT_PROGRAM)
+    switch (node->Type)
     {
-        genAsmRecursive(node->Lhs);
-        genAsmRecursive(node->Rhs);
-        return;
-    }
-    if (node->Type == NT_FUNCTION_DEF)
-    {
-        printf("%.*s:\n", node->FuncNameLen, node->pFuncName);
-        printf("  push rbp\n");
-        printf("  mov rbp, rsp\n");
-        printf("  sub rsp, %d\n", node->FuncLocalVCount * 8);
+        case NT_FUNCTION_DEF:
+            printf("%.*s:\n", node->Len, node->Str);
+            printf("  push rbp\n");
+            printf("  mov rbp, rsp\n");
+            printf("  sub rsp, %d\n", node->Value * 8);
 
-        genAsmFunctionArg(node->Lhs);
-        genAsmRecursive(node->Rhs);
-        return;
-    }
-    if (node->Type == NT_LVAL)
-    {
-        genAddr(node);
-        printf("  pop rax\n");
-        printf("  mov rax, [rax]\n");
-        printf("  push rax\n");
-        return;
-    }
-    if (node->Type == NT_NUM)
-    {
-        printf("  push %d\n", node->Value);
-        return;
-    }
-    if (node->Type == NT_ASSIGN)
-    {
-        genAddr(node->Lhs);
-        genAsmRecursive(node->Rhs);
-        printf("  pop rax\n");
-        printf("  pop rdi\n");
-        printf("  mov [rdi], rax\n");
-        printf("  push rax\n");
-        return;
-    }
-    if (node->Type == NT_STATEMENT)
-    {
-        genAsmRecursive(node->Lhs);
-        if (node->Lhs->HasValue) printf("  pop rax\n");
-        genAsmRecursive(node->Rhs);
-        if (node->Rhs->HasValue) printf("  pop rax\n");
-        return;
-    }
-    if (node->Type == NT_RETURN)
-    {
-        genAsmRecursive(node->Lhs);
-        printf("  pop rax\n");
+            genAsmFunctionArg(node->Lhs);
+            genAsmRecursive(node->Rhs);
+            return;
 
-        printf("  mov rsp, rbp\n");
-        printf("  pop rbp\n");
+        case NT_LVAL:
+            genAddr(node);
+            printf("  pop rax\n");
+            printf("  mov rax, [rax]\n");
+            printf("  push rax\n");
+            return;
 
-        printf("  ret\n");
-        return;
-    }
-    if (node->Type == NT_IF)
-    {
-        genAsmRecursive(node->Lhs);
-        printf("  pop rax\n");
-        printf("  cmp rax, 0\n");
-        printf("  je .Lelse%03d\n", node->IfId);
-        genAsmRecursive(node->Rhs->Lhs);
-        printf("  jmp .Lend%03d\n", node->IfId);
-        printf(".Lelse%03d:\n", node->IfId);
-        genAsmRecursive(node->Rhs->Rhs);
-        printf(".Lend%03d:\n", node->IfId);
-        return;
-    }
-    if (node->Type == NT_WHILE)
-    {
-        printf(".Lwhilestart%03d:\n", node->WhileId);
-        genAsmRecursive(node->Lhs);
-        printf("  pop rax\n");
-        printf("  cmp rax, 0\n");
-        printf("  je .Lwhileend%03d\n", node->WhileId);
-        genAsmRecursive(node->Rhs);
-        printf("  jmp .Lwhilestart%03d\n", node->WhileId);
-        printf(".Lwhileend%03d:\n", node->WhileId);
-        return;
-    }
-    if (node->Type == NT_FUNCTION_CALL)
-    {
-        if (node->FuncParamCount > 6)
-        {
-            error("function with more the 6 parameters is not suppoted.");
-        }
-        genFuncParamPassingAsm(node->Rhs, node->FuncParamCount);
-        printf("  mov rax, %d\n", node->FuncParamCount);
-        printf("  call %.*s\n", node->FuncNameLen, node->pFuncName);
-        printf("  push rax\n");
-        return;
+        case NT_NUM:
+            printf("  push %d\n", node->Value);
+            return;
+
+        case NT_ASSIGN:
+            genAddr(node->Lhs);
+            genAsmRecursive(node->Rhs);
+            printf("  pop rax\n");
+            printf("  pop rdi\n");
+            printf("  mov [rdi], rax\n");
+            printf("  push rax\n");
+            return;
+
+        case NT_STATEMENT:
+            genAsmRecursive(node->Lhs);
+            if (node->Lhs->HasValue) printf("  pop rax\n");
+            genAsmRecursive(node->Rhs);
+            if (node->Rhs->HasValue) printf("  pop rax\n");
+            return;
+
+        case NT_RETURN:
+            genAsmRecursive(node->Lhs);
+            printf("  pop rax\n");
+            printf("  mov rsp, rbp\n");
+            printf("  pop rbp\n");
+            printf("  ret\n");
+            return;
+
+        case NT_IF:
+            genAsmRecursive(node->Lhs);
+            printf("  pop rax\n");
+            printf("  cmp rax, 0\n");
+            printf("  je .Lelse%03d\n", node->Value);
+            genAsmRecursive(node->Rhs->Lhs);
+            printf("  jmp .Lend%03d\n", node->Value);
+            printf(".Lelse%03d:\n", node->Value);
+            genAsmRecursive(node->Rhs->Rhs);
+            printf(".Lend%03d:\n", node->Value);
+            return;
+
+        case NT_WHILE:
+            printf(".Lwhilestart%03d:\n", node->Value);
+            genAsmRecursive(node->Lhs);
+            printf("  pop rax\n");
+            printf("  cmp rax, 0\n");
+            printf("  je .Lwhileend%03d\n", node->Value);
+            genAsmRecursive(node->Rhs);
+            printf("  jmp .Lwhilestart%03d\n", node->Value);
+            printf(".Lwhileend%03d:\n", node->Value);
+            return;
+
+        case NT_FUNCTION_CALL:
+            if (node->Value > 6)
+            {
+                error("function with more the 6 parameters is not suppoted.");
+            }
+            genFuncParamPassingAsm(node->Rhs, node->Value);
+            printf("  mov rax, %d\n", node->Value);
+            printf("  call %.*s\n", node->Len, node->Str);
+            printf("  push rax\n");
+            return;
     }
 
     genAsmRecursive(node->Lhs);
@@ -266,6 +251,6 @@ void genAddr(Node* node)
     }
 
     printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->LValOffset);
+    printf("  sub rax, %d\n", node->Value * 8);
     printf("  push rax\n");
 }

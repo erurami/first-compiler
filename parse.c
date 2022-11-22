@@ -103,13 +103,13 @@ Node* function(void)
     }
 
     Node* node = newNode(NT_FUNCTION_DEF, arglist_node, block());
-    node->pFuncName = function_name;
-    node->FuncNameLen = function_name_len;
-    node->FuncLocalVCount = LValDict.ValsCount;
+    node->Str = function_name;
+    node->Len = function_name_len;
+    node->Value = LValDict.ValsCount;
 
     FunctionName* func_name = (FunctionName*)calloc(1, sizeof(FunctionName));
-    func_name->Name = node->pFuncName;
-    func_name->Len  = node->FuncNameLen;
+    func_name->Name = node->Str;
+    func_name->Len  = node->Len;
     FunctionNameCur->Next = func_name;
     FunctionNameCur = FunctionNameCur->Next;
 
@@ -161,9 +161,9 @@ Node* statement(void)
         {
             node->Rhs = block();
         }
-        node->IfId = IfCount;
+        node->Value = IfCount;
         node = newNode(NT_IF, if_cond, node);
-        node->IfId = IfCount;
+        node->Value = IfCount;
         IfCount++;
         return node;
     }
@@ -173,7 +173,7 @@ Node* statement(void)
         Node* while_cond = expression();
         expect(")");
         node = newNode(NT_WHILE, while_cond, block());
-        node->WhileId = WhileCount;
+        node->Value = WhileCount;
         WhileCount++;
         return node;
     }
@@ -322,14 +322,15 @@ Node* primary(void)
         expect(")");
         return node;
     }
+    // TODO : too complex
     if (ident = consumeIdent(&ident_len))
     {
         if (consume("("))
         {
             node = newNode(NT_FUNCTION_CALL, NULL, NULL);
-            node->pFuncName = ident;
-            node->FuncNameLen = ident_len;
-            node->FuncParamCount = 0;
+            node->Str = ident;
+            node->Len = ident_len;
+            node->Value = 0;
 
             if (consume(")")) return node;
 
@@ -339,7 +340,7 @@ Node* primary(void)
             {
                 node->Rhs = newNode(NT_FUNCTION_CALL_PARAM, expression(), NULL);
                 node = node->Rhs;
-                node_function->FuncParamCount++;
+                node_function->Value++;
                 if (!consume(","))
                 {
                     expect(")");
@@ -428,13 +429,13 @@ void printNode(Node* node, int layer)
             break;
         case NT_LVAL:
             printf("%*ctype : LVAL\n", layer * 4, ' ');
-            printf("%*cvalue id : %d\n", layer * 4, ' ', node->LValOffset / 8);
+            printf("%*cvalue id : %d\n", layer * 4, ' ', node->Value);
             break;
 
         case NT_FUNCTION_CALL:
             printf("%*ctype : FUNCTION_CALL\n", layer * 4, ' ');
-            printf("%*cname : %.*s\n", layer * 4, ' ', node->FuncNameLen, node->pFuncName);
-            printf("%*cparam count : %d\n", layer * 4, ' ', node->FuncParamCount);
+            printf("%*cname : %.*s\n", layer * 4, ' ', node->Len, node->Str);
+            printf("%*cparam count : %d\n", layer * 4, ' ', node->Value);
             break;
         case NT_FUNCTION_CALL_PARAM:
             printf("%*ctype : FUNCTION_CALL_PARAM\n", layer * 4, ' ');
@@ -485,11 +486,11 @@ void printNode(Node* node, int layer)
 
         case NT_IF:
             printf("%*ctype : IF\n", layer * 4, ' ');
-            printf("%*cifid : %d\n", layer * 4, ' ', node->IfId);
+            printf("%*cifid : %d\n", layer * 4, ' ', node->Value);
             break;
         case NT_IF_BLOCK:
             printf("%*ctype : IF_BLOCK\n", layer * 4, ' ');
-            printf("%*cifid : %d\n", layer * 4, ' ', node->IfId);
+            printf("%*cifid : %d\n", layer * 4, ' ', node->Value);
             break;
 
         case NT_WHILE:
@@ -502,8 +503,8 @@ void printNode(Node* node, int layer)
 
         case NT_FUNCTION_DEF:
             printf("%*ctype : FUNCTION_DEF\n", layer * 4, ' ');
-            printf("%*cfunction name : %.*s\n", layer * 4, ' ', node->FuncNameLen, node->pFuncName);
-            printf("%*cfunction name len : %d\n", layer * 4, ' ', node->FuncNameLen);
+            printf("%*cfunction name : %.*s\n", layer * 4, ' ', node->Len, node->Str);
+            printf("%*cfunction name len : %d\n", layer * 4, ' ', node->Len);
             break;
 
         case NT_PROGRAM:
@@ -586,9 +587,9 @@ Node* newLvalNode(char* ident, int len)
 {
     Node* node;
     node = newNode(NT_LVAL, NULL, NULL);
-    node->LValOffset = getLValId(ident, len) * 8;
-    node->pLValName = ident;
-    node->LValNameLen = len;
+    node->Value = getLValId(ident, len);
+    node->Str = ident;
+    node->Len = len;
     node->HasValue = true;
 }
 

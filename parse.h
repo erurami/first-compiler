@@ -59,20 +59,6 @@ struct Node
     int   Len;
 
     bool HasValue;
-
-
-    int LValOffset;
-    char* pLValName;
-    int LValNameLen;
-
-    int IfId;
-    int WhileId;
-
-    char* pFuncName;
-    int FuncNameLen;
-    int FuncParamCount;
-
-    int FuncLocalVCount;
 };
 
 
