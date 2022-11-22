@@ -12,25 +12,18 @@ void genAsmRecursive(Node* node);
 void genAddr(Node* node);
 void genFuncParamPassingAsm(Node* node, int paramCount);
 void genAsm(Node* node);
-void genAsmFunctionArg(Node* node)
+void genAsmFunctionArg(Node* node);
 
 
 
 void genAsm(Node* node)
 {
-    IsThereReturn = false;
-
     printf(".intel_syntax noprefix\n");
     printf(".global ");
     printFunctionNames();
     printf("\n");
 
     genAsmRecursive(node);
-
-    if (IsThereReturn == false)
-    {
-        error("no return statement.");
-    }
 }
 
 void genAsmRecursive(Node* node)
@@ -94,7 +87,6 @@ void genAsmRecursive(Node* node)
         printf("  pop rbp\n");
 
         printf("  ret\n");
-        IsThereReturn = true;
         return;
     }
     if (node->Type == NT_IF)

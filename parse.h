@@ -56,7 +56,7 @@ struct Node
 
     int   Value;
     char* Str;
-    int   Len
+    int   Len;
 
     bool HasValue;
 
