@@ -7,10 +7,14 @@
 #include "parse.h"
 #include "codegen.h"
 
-bool IsThereReturn;
 
-void genAsmSingleStatement(Node* node);
+void genAsmRecursive(Node* node);
 void genAddr(Node* node);
+void genFuncParamPassingAsm(Node* node, int paramCount);
+void genAsm(Node* node);
+void genAsmFunctionArg(Node* node)
+
+
 
 void genAsm(Node* node)
 {
@@ -21,7 +25,7 @@ void genAsm(Node* node)
     printFunctionNames();
     printf("\n");
 
-    genAsmSingleStatement(node);
+    genAsmRecursive(node);
 
     if (IsThereReturn == false)
     {
@@ -29,99 +33,14 @@ void genAsm(Node* node)
     }
 }
 
-void genFuncParamPassingAsm(Node* node, int paramCount)
-{
-    for (int i = 0 ; i < paramCount; i++)
-    {
-        genAsmSingleStatement(node->Lhs);
-        node = node->Rhs;
-    }
-
-    for (int i = paramCount; i > 0; i--)
-    {
-        switch (i)
-        {
-            case 1:
-                printf("  pop rdi\n");
-                break;
-            case 2:
-                printf("  pop rsi\n");
-                break;
-            case 3:
-                printf("  pop rdx\n");
-                break;
-            case 4:
-                printf("  pop rcx\n");
-                break;
-            case 5:
-                printf("  pop r8\n");
-                break;
-            case 6:
-                printf("  pop r9\n");
-                break;
-        }
-    }
-}
-
-void genAsmFunctionArgPrologue(Node* node)
+void genAsmRecursive(Node* node)
 {
     if (node == NULL) return;
-    Node* argument_node;
-    for (int i = 0; i < 6; i++)
-    {
-        argument_node = node;
-        if (node->Type == NT_FUNCTION_ARGUMENT) argument_node = node->Lhs;
 
-        genAddr(argument_node);
-        printf("  pop rax\n");
-        switch (i)
-        {
-            case 0:
-                printf("  mov [rax], rdi\n");
-                break;
-            case 1:
-                printf("  mov [rax], rsi\n");
-                break;
-            case 2:
-                printf("  mov [rax], rdx\n");
-                break;
-            case 3:
-                printf("  mov [rax], rcx\n");
-                break;
-            case 4:
-                printf("  mov [rax], r8\n");
-                break;
-            case 5:
-                printf("  mov [rax], r9\n");
-                break;
-        }
-
-        if (node->Type != NT_FUNCTION_ARGUMENT) return;
-        node = node->Rhs;
-    }
-    error("cannnot declare function with more than 6 arguments");
-    return;
-}
-
-void genAddr(Node* node)
-{
-    if (node->Type != NT_LVAL)
-    {
-        error("left side of assign must have an address");
-    }
-
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->LValOffset);
-    printf("  push rax\n");
-}
-
-void genAsmSingleStatement(Node* node)
-{
-    if (node == NULL) return;
     if (node->Type == NT_PROGRAM)
     {
-        genAsmSingleStatement(node->Lhs);
-        genAsmSingleStatement(node->Rhs);
+        genAsmRecursive(node->Lhs);
+        genAsmRecursive(node->Rhs);
         return;
     }
     if (node->Type == NT_FUNCTION_DEF)
@@ -131,8 +50,8 @@ void genAsmSingleStatement(Node* node)
         printf("  mov rbp, rsp\n");
         printf("  sub rsp, %d\n", node->FuncLocalVCount * 8);
 
-        genAsmFunctionArgPrologue(node->Lhs);
-        genAsmSingleStatement(node->Rhs);
+        genAsmFunctionArg(node->Lhs);
+        genAsmRecursive(node->Rhs);
         return;
     }
     if (node->Type == NT_LVAL)
@@ -151,7 +70,7 @@ void genAsmSingleStatement(Node* node)
     if (node->Type == NT_ASSIGN)
     {
         genAddr(node->Lhs);
-        genAsmSingleStatement(node->Rhs);
+        genAsmRecursive(node->Rhs);
         printf("  pop rax\n");
         printf("  pop rdi\n");
         printf("  mov [rdi], rax\n");
@@ -160,15 +79,15 @@ void genAsmSingleStatement(Node* node)
     }
     if (node->Type == NT_STATEMENT)
     {
-        genAsmSingleStatement(node->Lhs);
+        genAsmRecursive(node->Lhs);
         if (node->Lhs->HasValue) printf("  pop rax\n");
-        genAsmSingleStatement(node->Rhs);
+        genAsmRecursive(node->Rhs);
         if (node->Rhs->HasValue) printf("  pop rax\n");
         return;
     }
     if (node->Type == NT_RETURN)
     {
-        genAsmSingleStatement(node->Lhs);
+        genAsmRecursive(node->Lhs);
         printf("  pop rax\n");
 
         printf("  mov rsp, rbp\n");
@@ -180,25 +99,25 @@ void genAsmSingleStatement(Node* node)
     }
     if (node->Type == NT_IF)
     {
-        genAsmSingleStatement(node->Lhs);
+        genAsmRecursive(node->Lhs);
         printf("  pop rax\n");
         printf("  cmp rax, 0\n");
         printf("  je .Lelse%03d\n", node->IfId);
-        genAsmSingleStatement(node->Rhs->Lhs);
+        genAsmRecursive(node->Rhs->Lhs);
         printf("  jmp .Lend%03d\n", node->IfId);
         printf(".Lelse%03d:\n", node->IfId);
-        genAsmSingleStatement(node->Rhs->Rhs);
+        genAsmRecursive(node->Rhs->Rhs);
         printf(".Lend%03d:\n", node->IfId);
         return;
     }
     if (node->Type == NT_WHILE)
     {
         printf(".Lwhilestart%03d:\n", node->WhileId);
-        genAsmSingleStatement(node->Lhs);
+        genAsmRecursive(node->Lhs);
         printf("  pop rax\n");
         printf("  cmp rax, 0\n");
         printf("  je .Lwhileend%03d\n", node->WhileId);
-        genAsmSingleStatement(node->Rhs);
+        genAsmRecursive(node->Rhs);
         printf("  jmp .Lwhilestart%03d\n", node->WhileId);
         printf(".Lwhileend%03d:\n", node->WhileId);
         return;
@@ -216,8 +135,8 @@ void genAsmSingleStatement(Node* node)
         return;
     }
 
-    genAsmSingleStatement(node->Lhs);
-    genAsmSingleStatement(node->Rhs);
+    genAsmRecursive(node->Lhs);
+    genAsmRecursive(node->Rhs);
 
     printf("  pop rdi\n");
     printf("  pop rax\n");
@@ -273,3 +192,88 @@ void genAsmSingleStatement(Node* node)
 }
 
 
+void genFuncParamPassingAsm(Node* node, int paramCount)
+{
+    for (int i = 0 ; i < paramCount; i++)
+    {
+        genAsmRecursive(node->Lhs);
+        node = node->Rhs;
+    }
+
+    for (int i = paramCount; i > 0; i--)
+    {
+        switch (i)
+        {
+            case 1:
+                printf("  pop rdi\n");
+                break;
+            case 2:
+                printf("  pop rsi\n");
+                break;
+            case 3:
+                printf("  pop rdx\n");
+                break;
+            case 4:
+                printf("  pop rcx\n");
+                break;
+            case 5:
+                printf("  pop r8\n");
+                break;
+            case 6:
+                printf("  pop r9\n");
+                break;
+        }
+    }
+}
+
+void genAsmFunctionArg(Node* node)
+{
+    if (node == NULL) return;
+    Node* argument_node;
+    for (int i = 0; i < 6; i++)
+    {
+        argument_node = node;
+        if (node->Type == NT_FUNCTION_ARGUMENT) argument_node = node->Lhs;
+
+        genAddr(argument_node);
+        printf("  pop rax\n");
+        switch (i)
+        {
+            case 0:
+                printf("  mov [rax], rdi\n");
+                break;
+            case 1:
+                printf("  mov [rax], rsi\n");
+                break;
+            case 2:
+                printf("  mov [rax], rdx\n");
+                break;
+            case 3:
+                printf("  mov [rax], rcx\n");
+                break;
+            case 4:
+                printf("  mov [rax], r8\n");
+                break;
+            case 5:
+                printf("  mov [rax], r9\n");
+                break;
+        }
+
+        if (node->Type != NT_FUNCTION_ARGUMENT) return;
+        node = node->Rhs;
+    }
+    error("cannnot declare function with more than 6 arguments");
+    return;
+}
+
+void genAddr(Node* node)
+{
+    if (node->Type != NT_LVAL)
+    {
+        error("left side of assign must have an address");
+    }
+
+    printf("  mov rax, rbp\n");
+    printf("  sub rax, %d\n", node->LValOffset);
+    printf("  push rax\n");
+}
