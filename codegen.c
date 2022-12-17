@@ -26,6 +26,8 @@ void genAsm(Node* node)
     genAsmRecursive(node);
 }
 
+// TODO: Separate function
+//        * by the node has value or not
 void genAsmRecursive(Node* node)
 {
     if (node == NULL) return;
@@ -109,6 +111,17 @@ void genAsmRecursive(Node* node)
             printf("  mov rax, %d\n", node->Value);
             printf("  call %.*s\n", node->Len, node->Str);
             printf("  push rax\n");
+            return;
+
+        case NT_DEREFERENCE:
+            genAsmRecursive(node->Lhs);
+            printf("  pop rax\n");
+            printf("  mov rax, [rax]\n");
+            printf("  push rax\n");
+            return;
+
+        case NT_ADDRESS:
+            genAddr(node->Lhs);
             return;
     }
 
@@ -245,12 +258,22 @@ void genAsmFunctionArg(Node* node)
 
 void genAddr(Node* node)
 {
-    if (node->Type != NT_LVAL)
+    if (node->IsOnRam == false)
     {
         error("left side of assign must have an address");
     }
 
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->Value * 8);
-    printf("  push rax\n");
+    if (node->Type == NT_DEREFERENCE)
+    {
+        genAsmRecursive(node->Lhs);
+        return;
+    }
+
+    if (node->Type == NT_LVAL)
+    {
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", node->Value * 8);
+        printf("  push rax\n");
+        return;
+    }
 }

@@ -59,6 +59,8 @@ Node* add(void);
 Node* mul(void);
 Node* unary(void);
 Node* primary(void);
+Node* dereference(void);
+Node* address(void);
 Node* lval(void);
 
 Node* parse(void)
@@ -191,6 +193,7 @@ Node* expression(void)
 Node* assign(void)
 {
     Node* node = equality();
+
     if (consume("="))
     {
         node = newNode(NT_ASSIGN, node, assign());
@@ -300,7 +303,7 @@ Node* unary(void)
         consume("+");
     }
 
-    Node* node = primary();
+    Node* node = dereference();
 
     if (plus == false)
     {
@@ -308,6 +311,15 @@ Node* unary(void)
     }
 
     return node;
+}
+
+Node* dereference(void)
+{
+    if (consume("*"))
+    {
+        return newNode(NT_DEREFERENCE, dereference(), NULL);
+    }
+    return primary();
 }
 
 Node* primary(void)
@@ -320,6 +332,11 @@ Node* primary(void)
     {
         node = equality();
         expect(")");
+        return node;
+    }
+    if (consume("&"))
+    {
+        node = address();
         return node;
     }
     // TODO : too complex
@@ -359,6 +376,16 @@ Node* primary(void)
     }
 
     return node;
+}
+
+Node* address(void)
+{
+    int ident_len;
+    char* ident = consumeIdent(&ident_len);
+
+    Node* node = newLvalNode(ident, ident_len);
+
+    return newNode(NT_ADDRESS, node, NULL);
 }
 
 Node* lval(void)
@@ -477,6 +504,14 @@ void printNode(Node* node, int layer)
             printf("%*ctype : ASSIGN\n", layer * 4, ' ');
             break;
 
+        case NT_DEREFERENCE:
+            printf("%*ctype : DEREFERENCE\n", layer * 4, ' ');
+            break;
+
+        case NT_ADDRESS:
+            printf("%*ctype : ADDRESS\n", layer * 4, ' ');
+            break;
+
         case NT_RETURN:
             printf("%*ctype : RETURN\n", layer * 4, ' ');
             break;
@@ -562,6 +597,8 @@ Node* newNode(NodeType type, Node* lhs, Node* rhs)
         case NT_LESSEQUAL:
         case NT_ASSIGN:
             node->HasValue = true;
+            node->IsAssignable = false;
+            node->IsOnRam = false;
             break;
 
         case NT_IF:
@@ -569,7 +606,22 @@ Node* newNode(NodeType type, Node* lhs, Node* rhs)
         case NT_WHILE:
         case NT_RETURN:
             node->HasValue = false;
+            node->IsAssignable = false;
+            node->IsOnRam = false;
             break;
+
+        case NT_ADDRESS:
+            node->HasValue = true;
+            node->IsAssignable = false;
+            node->IsOnRam = false;
+            break;
+
+        case NT_DEREFERENCE:
+            node->HasValue = true;
+            node->IsAssignable = true;
+            node->IsOnRam = true;
+            break;
+
     }
     return node;
 }
@@ -580,6 +632,8 @@ Node* newNumNode(int value)
     node->Type = NT_NUM;
     node->Value = value;
     node->HasValue = true;
+    node->IsAssignable = false;
+    node->IsOnRam = false;
     return node;
 }
 
@@ -591,5 +645,8 @@ Node* newLvalNode(char* ident, int len)
     node->Str = ident;
     node->Len = len;
     node->HasValue = true;
+    node->IsAssignable = true;
+    node->IsOnRam = true;
+    return node;
 }
 

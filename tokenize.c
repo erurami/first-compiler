@@ -10,7 +10,7 @@
 
 static Token* token;
 
-int OPERATORS_COUNT = 17;
+int OPERATORS_COUNT = 18;
 
 char* operators[] = \
 {
@@ -31,6 +31,7 @@ char* operators[] = \
     "/",
     "(",
     ")",
+    "&",
 };
 
 

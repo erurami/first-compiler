@@ -50,11 +50,14 @@ assign = equality ('=' assign)?
 equality = comp ( '==' comp | '!-' comp)*
 comp = add ( '>' add | '>=' add | '<' add | '<=' add)*
 add = mul ( '+' mul | '-' mul)*
-mul = primary ( '*' primary | '/' primary )*
-unary = ('+' | '-')? primary
+mul = unary ( '*' unary | '/' unary )*
+unary = ('+' | '-')? dereference
+dereference = '*'* primary
 primary = num
         | ident ('(' (expression (',' expression)*)? ')')?
         | '(' assign ')'
+        | address
+address = '&' ident
 ```
 
 Here is an example.

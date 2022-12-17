@@ -40,6 +40,9 @@ typedef enum
 
     NT_ASSIGN,
 
+    NT_DEREFERENCE,
+    NT_ADDRESS,
+
     // val and literal
     NT_NUM,
     NT_LVAL,
@@ -59,6 +62,8 @@ struct Node
     int   Len;
 
     bool HasValue;
+    bool IsAssignable;
+    bool IsOnRam;
 };
 
 
