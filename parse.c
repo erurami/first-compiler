@@ -10,15 +10,8 @@
 #include "tokenize.h"
 
 
-typedef struct FunctionName FunctionName;
 
-struct FunctionName
-{
-    char* Name;
-    int Len;
-    FunctionName* Next;
-};
-
+ProgramElem* JoinNewProgramElem(ProgramElem* cur, Node* newElemRootNode);
 
 struct LValDictStruct
 {
@@ -27,11 +20,6 @@ struct LValDictStruct
 };
 
 extern struct LValDictStruct LValDict;
-
-
-// stores function names that appears in the code.
-FunctionName* FunctionNames;
-FunctionName* FunctionNameCur;
 
 
 // functions for new node
@@ -45,7 +33,7 @@ void initLocalValiablesDict(void);
 int IfCount;
 int WhileCount;
 
-Node* program(void);
+Program* program(void);
 Node* function(void);
 Node* arglist(void);
 Node* block(void);
@@ -63,30 +51,39 @@ Node* dereference(void);
 Node* address(void);
 Node* lval(void);
 
-Node* parse(void)
+
+
+
+
+Program* parse(void)
 {
     IfCount = 1;
     WhileCount = 1;
 
-    Node* node;
-
-    FunctionName fn_head;
-    FunctionNameCur = &fn_head;
-
-    node = program();
-
-    FunctionNames = fn_head.Next;
-
-    return node;
+    return program();
 }
 
-Node* program(void)
+Program* program(void)
 {
-    Node* node = function();
-    if (atEof()) return node;
+    Program* p_program = (Program*)calloc(1, sizeof(Program));
 
-    node = newNode(NT_PROGRAM, node, program());
-    return node;
+    ProgramElem head;
+    head.Next = NULL;
+    ProgramElem* cur = &head;
+
+    Node* node;
+    while (!atEof())
+    {
+        node = function();
+        cur = JoinNewProgramElem(cur, node);
+        cur->Type = ET_FUNCTION;
+        cur->Str = node->Str;
+        cur->Len = node->Len;
+    }
+
+    p_program->FirstElem = head.Next;
+
+    return p_program;
 }
 
 Node* function(void)
@@ -108,12 +105,6 @@ Node* function(void)
     node->Str = function_name;
     node->Len = function_name_len;
     node->Value = LValDict.ValsCount;
-
-    FunctionName* func_name = (FunctionName*)calloc(1, sizeof(FunctionName));
-    func_name->Name = node->Str;
-    func_name->Len  = node->Len;
-    FunctionNameCur->Next = func_name;
-    FunctionNameCur = FunctionNameCur->Next;
 
     return node;
 }
@@ -398,6 +389,18 @@ Node* lval(void)
 
 
 
+ProgramElem* JoinNewProgramElem(ProgramElem* cur, Node* node)
+{
+    ProgramElem* new_elem = (ProgramElem*)calloc(1, sizeof(ProgramElem));
+
+    new_elem->Node = node;
+    cur->Next = new_elem;
+
+    new_elem->Next = NULL;
+
+    return new_elem;
+}
+
 
 // Dictionaly for local variables
 struct LValDictStruct LValDict;
@@ -437,9 +440,15 @@ int getLValId(char* ident, int len)
 
 
 
-void printProgramTree(Node* node)
+void printProgramTree(Program* program)
 {
-    printNode(node, 0);
+    ProgramElem* cur = program->FirstElem;
+
+    while (cur != NULL)
+    {
+        printNode(cur->Node, 0);
+        cur = cur->Next;
+    }
 }
 
 void printNode(Node* node, int layer)
@@ -561,20 +570,6 @@ void printNode(Node* node, int layer)
     }
 }
 
-void printFunctionNames(void)
-{
-    FunctionName* cur = FunctionNames;
-
-    bool first_node = true;
-    while (cur != NULL)
-    {
-        if (first_node == false) printf(", ");
-        printf("%.*s", cur->Len, cur->Name);
-        first_node = false;
-        cur = cur->Next;
-    }
-
-}
 
 
 Node* newNode(NodeType type, Node* lhs, Node* rhs)

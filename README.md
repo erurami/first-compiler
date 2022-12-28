@@ -33,8 +33,6 @@ In order to convert array of token to tree structure of the program, I used recu
 
 **The tree structure has many point to improve. So I'm welcome for any improvement especially for this section of code.**
 
-Here is the syntax of currently supporting programming language in BNF
-
 ```
 program = function*
 function = ident '(' ')' block

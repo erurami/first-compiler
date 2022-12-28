@@ -11,19 +11,37 @@
 void genAsmRecursive(Node* node);
 void genAddr(Node* node);
 void genFuncParamPassingAsm(Node* node, int paramCount);
-void genAsm(Node* node);
 void genAsmFunctionArg(Node* node);
 
 
 
-void genAsm(Node* node)
+void genAsm(Program* program)
 {
+    ProgramElem* cur;
+
+    if (program == NULL) return;
     printf(".intel_syntax noprefix\n");
     printf(".global ");
-    printFunctionNames();
+
+    cur = program->FirstElem;
+    while (cur != NULL)
+    {
+        if (cur != program->FirstElem)
+        {
+            printf(", ");
+        }
+        printf("%.*s", cur->Len, cur->Str);
+        cur = cur->Next;
+    }
+
     printf("\n");
 
-    genAsmRecursive(node);
+    cur = program->FirstElem;
+    while (cur != NULL)
+    {
+        genAsmRecursive(program->FirstElem->Node);
+        cur = cur->Next;
+    }
 }
 
 // TODO: Separate function

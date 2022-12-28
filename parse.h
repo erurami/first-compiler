@@ -50,7 +50,6 @@ typedef enum
 
 typedef struct Node Node;
 
-// TODO: make general perpose member e.g. Str to store string.
 struct Node
 {
     NodeType Type;
@@ -66,16 +65,39 @@ struct Node
     bool IsOnRam;
 };
 
+typedef enum
+{
+    ET_FUNCTION,
+} ElementType;
+
+typedef struct ProgramElem ProgramElem;
+
+struct ProgramElem
+{
+    Node* Node;
+
+    ElementType Type;
+    char* Str;
+    int   Len;
+
+    ProgramElem* Next;
+};
+
+typedef struct GlobalIdent GlobalIdent;
+
+typedef struct
+{
+    ProgramElem* FirstElem;
+} Program;
+
 
 
 // Parses the code just tokenized
 // Returns the root node of the tree of the program
-Node* parse(void);
+Program* parse(void);
 
-void printProgramTree(Node* node);
+void printProgramTree(Program* program);
 void printNode(Node* node, int layer);
-
-void printFunctionNames(void);
 
 #endif
 

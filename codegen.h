@@ -1,5 +1,8 @@
 
+
+#include "parse.h"
+
 // void checkProgram(void);
 
-void genAsm(Node* node);
+void genAsm(Program* program);
 

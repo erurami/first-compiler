@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "common.h"
 #include "tokenize.h"
@@ -19,17 +20,65 @@ void error(char* fmt, ...)
     exit(1);
 }
 
+
+int digitsCount(int num)
+{
+    int digits_c = 0;
+    while (num != 0)
+    {
+        num /= 10;
+        digits_c++;
+    }
+    return digits_c;
+}
+
 void errorAt(char* location, char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "%s\n", SourceCode);
-    if (location != NULL)
+    if (location == NULL)
     {
-        fprintf(stderr, "%*c^ \n", (int)(location - SourceCode), ' ');
+        exit(1);
     }
+
+    int line_number = 1;
+    int pos_in_line = 0;
+    int line_width = 0;
+    char* line_beginning = SourceCode;
+    char* scanning = SourceCode;
+    for (; scanning < location; scanning++)
+    {
+        switch (*scanning)
+        {
+            case '\n':
+                line_number++;
+                pos_in_line = 0;
+                line_width = 0;
+                line_beginning = scanning + 1;
+                break;
+            default:
+                pos_in_line++;
+                line_width++;
+                break;
+        }
+    }
+    pos_in_line++;
+    while (1)
+    {
+        scanning++;
+        if (*scanning == '\n') break;
+        if (*scanning == '\0') break;
+        line_width++;
+    }
+
+    char* line = malloc(sizeof(char) * (line_width + 1));
+    memcpy(line, line_beginning, line_width * sizeof(char));
+    line[line_width] = '\0';
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, " %d | %s\n", line_number, line);
+    fprintf(stderr, " %*c | %*c^\n", digitsCount(line_number), ' ', pos_in_line - 1, ' ');
     exit(1);
 }
 
@@ -73,12 +122,11 @@ int main(int argc, char** argv)
 
     // printTokens();
 
-    Node* program_tree = parse();
+    Program* program = parse();
 
-    // printProgramTree(program_tree);
-    // printFunctionNames();
+    // printProgramTree(program);
     // printf("\n\n\n\n");
-    genAsm(program_tree);
+    genAsm(program);
 
     return 0;
 }
